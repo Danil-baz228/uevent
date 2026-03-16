@@ -1,0 +1,21 @@
+{
+  "name": "uevent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Uevent full-stack monorepo scaffold",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev:web": "npm --workspace @uevent/web run dev",
+    "dev:api": "npm --workspace @uevent/api run start:dev",
+    "build:web": "npm --workspace @uevent/web run build",
+    "build:api": "npm --workspace @uevent/api run build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  }
+}
