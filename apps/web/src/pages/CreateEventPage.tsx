@@ -1,25 +1,108 @@
+import { FormEvent, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+import { useAuth } from '../auth/AuthContext';
+import { createEvent } from '../lib/api';
+
+const initialForm = {
+  title: '',
+  description: '',
+  category: '',
+  city: '',
+  startsAt: '',
+  price: '0',
+  capacity: '50',
+};
+
 export function CreateEventPage() {
+  const { user, token, isReady } = useAuth();
+  const [form, setForm] = useState(initialForm);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>(
+    'idle',
+  );
+  const [message, setMessage] = useState('');
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus('saving');
+    setMessage('');
+
+    try {
+      if (!token) {
+        throw new Error('Please sign in before creating an event');
+      }
+
+      await createEvent({
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        city: form.city,
+        startsAt: new Date(form.startsAt).toISOString(),
+        price: Number(form.price),
+        capacity: Number(form.capacity),
+      }, token);
+
+      setStatus('success');
+      setMessage('Event saved to PostgreSQL successfully.');
+      setForm(initialForm);
+    } catch (submitError) {
+      setStatus('error');
+      setMessage(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Failed to create the event',
+      );
+    }
+  }
+
   return (
     <section className="form-shell">
       <div className="form-sidebar">
         <span className="eyebrow">Organizer flow</span>
-        <h1>Create-event screen starter</h1>
+        <h1>Create a real event in the database</h1>
         <p>
-          A good next backend milestone is saving drafts, validating forms, and
-          later attaching Stripe checkout for paid entries.
+          This form writes directly to the NestJS API, and each successful
+          submit becomes a row in PostgreSQL.
         </p>
 
         <ul className="feature-list">
-          <li>Draft event endpoint already exists on the API scaffold</li>
-          <li>Price field maps naturally to future Stripe products</li>
-          <li>Category and city are already part of the shared event shape</li>
+          <li>TypeORM persists every created event</li>
+          <li>The logged-in user becomes the organizer</li>
+          <li>New events appear on the Discover page after reload</li>
         </ul>
+
+        <p className="muted">Demo account: demo@uevent.local / demo12345</p>
+        {user ? (
+          <p className="muted">
+            Signed in as {user.displayName} ({user.email})
+          </p>
+        ) : null}
       </div>
 
-      <form className="form-card">
+      {!isReady ? <p className="notice">Loading session...</p> : null}
+      {isReady && !user ? (
+        <div className="form-card">
+          <p className="notice">
+            Please sign in first. Event creation is now protected by JWT auth.
+          </p>
+          <Link to="/auth" className="primary-button">
+            Go to login
+          </Link>
+        </div>
+      ) : null}
+
+      {isReady && user ? (
+      <form className="form-card" onSubmit={handleSubmit}>
         <label className="field">
           <span>Title</span>
-          <input placeholder="Product Night for Curious Builders" />
+          <input
+            placeholder="Product Night for Curious Builders"
+            value={form.title}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, title: event.target.value }))
+            }
+            required
+          />
         </label>
 
         <label className="field">
@@ -27,37 +110,116 @@ export function CreateEventPage() {
           <textarea
             placeholder="What should people expect from this gathering?"
             rows={5}
+            value={form.description}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            required
           />
         </label>
 
         <div className="form-grid">
           <label className="field">
             <span>Category</span>
-            <input placeholder="Networking" />
+            <input
+              placeholder="Networking"
+              value={form.category}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  category: event.target.value,
+                }))
+              }
+              required
+            />
           </label>
 
           <label className="field">
             <span>City</span>
-            <input placeholder="Kharkiv" />
+            <input
+              placeholder="Kharkiv"
+              value={form.city}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, city: event.target.value }))
+              }
+              required
+            />
           </label>
         </div>
 
         <div className="form-grid">
           <label className="field">
             <span>Date and time</span>
-            <input type="datetime-local" />
+            <input
+              type="datetime-local"
+              value={form.startsAt}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  startsAt: event.target.value,
+                }))
+              }
+              required
+            />
           </label>
 
           <label className="field">
             <span>Ticket price</span>
-            <input type="number" placeholder="0" min="0" />
+            <input
+              type="number"
+              placeholder="0"
+              min="0"
+              step="1"
+              value={form.price}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, price: event.target.value }))
+              }
+            />
           </label>
         </div>
 
-        <button type="button" className="primary-button">
-          Save draft later
-        </button>
+        <div className="form-grid">
+          <label className="field">
+            <span>Capacity</span>
+            <input
+              type="number"
+              placeholder="50"
+              min="1"
+              step="1"
+              value={form.capacity}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  capacity: event.target.value,
+                }))
+              }
+            />
+          </label>
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={status === 'saving'}
+          >
+            {status === 'saving' ? 'Saving...' : 'Create event'}
+          </button>
+          <Link to="/discover" className="secondary-button">
+            Open discover page
+          </Link>
+        </div>
+
+        {message ? (
+          <p className={`notice ${status === 'error' ? 'error' : 'success'}`}>
+            {message}
+          </p>
+        ) : null}
       </form>
+      ) : null}
     </section>
   );
 }

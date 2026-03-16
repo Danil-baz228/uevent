@@ -1,11 +1,15 @@
 import { NavLink, Outlet, Route, Routes } from 'react-router-dom';
 
+import { useAuth } from './auth/AuthContext';
+import { AuthPage } from './pages/AuthPage';
 import { CreateEventPage } from './pages/CreateEventPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 function Layout() {
+  const { user, logout } = useAuth();
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -27,7 +31,28 @@ function Layout() {
           <NavLink to="/create-event" className="nav-link">
             Create event
           </NavLink>
+          <NavLink to="/auth" className="nav-link">
+            {user ? 'Account' : 'Login'}
+          </NavLink>
         </nav>
+
+        <div className="header-actions">
+          {user ? (
+            <>
+              <div className="user-chip">
+                <strong>{user.displayName}</strong>
+                <span>{user.email}</span>
+              </div>
+              <button type="button" className="secondary-button" onClick={logout}>
+                Logout
+              </button>
+            </>
+          ) : (
+            <NavLink to="/auth" className="secondary-button">
+              Sign in
+            </NavLink>
+          )}
+        </div>
       </header>
 
       <main className="page">
@@ -49,6 +74,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/create-event" element={<CreateEventPage />} />
+        <Route path="/auth" element={<AuthPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

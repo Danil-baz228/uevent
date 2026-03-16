@@ -92,6 +92,25 @@ textarea {
   gap: 10px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-chip {
+  display: grid;
+  border: 1px solid rgba(23, 32, 51, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 10px 14px;
+}
+
+.user-chip span {
+  color: rgba(23, 32, 51, 0.62);
+  font-size: 0.9rem;
+}
+
 .nav-link,
 .pill {
   border: 1px solid rgba(23, 32, 51, 0.1);
@@ -179,7 +198,10 @@ textarea {
 .form-sidebar p,
 .feature-list,
 .list-card p,
-.event-card p {
+.event-card p,
+.status-row,
+.notice,
+.muted {
   color: rgba(23, 32, 51, 0.72);
 }
 
@@ -188,15 +210,39 @@ textarea {
 .event-meta,
 .list-card,
 .list-card-meta,
-.form-grid {
+.form-grid,
+.form-actions {
   display: flex;
   gap: 12px;
 }
 
 .hero-actions,
-.pill-row {
+.pill-row,
+.form-actions {
   flex-wrap: wrap;
   margin-top: 20px;
+}
+
+.status-row {
+  margin-top: 16px;
+  font-weight: 600;
+}
+
+.notice {
+  border: 1px solid rgba(23, 32, 51, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 14px 16px;
+}
+
+.notice.success {
+  border-color: rgba(45, 159, 143, 0.32);
+  background: rgba(218, 244, 238, 0.8);
+}
+
+.notice.error {
+  border-color: rgba(196, 87, 45, 0.28);
+  background: rgba(255, 236, 230, 0.86);
 }
 
 .primary-button,
@@ -213,6 +259,11 @@ textarea {
   border: none;
   background: #172033;
   color: white;
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .secondary-button {
@@ -233,15 +284,30 @@ textarea {
 }
 
 .event-card.sunrise {
-  background: linear-gradient(180deg, rgba(255, 234, 214, 0.96), rgba(255, 255, 255, 0.84));
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 234, 214, 0.96),
+      rgba(255, 255, 255, 0.84)
+    );
 }
 
 .event-card.mint {
-  background: linear-gradient(180deg, rgba(218, 244, 238, 0.96), rgba(255, 255, 255, 0.84));
+  background:
+    linear-gradient(
+      180deg,
+      rgba(218, 244, 238, 0.96),
+      rgba(255, 255, 255, 0.84)
+    );
 }
 
 .event-card.night {
-  background: linear-gradient(180deg, rgba(224, 231, 255, 0.96), rgba(255, 255, 255, 0.84));
+  background:
+    linear-gradient(
+      180deg,
+      rgba(224, 231, 255, 0.96),
+      rgba(255, 255, 255, 0.84)
+    );
 }
 
 .event-card h3,
@@ -265,6 +331,39 @@ textarea {
 
 .list-grid {
   grid-template-columns: 1fr;
+}
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  padding: 12px 0 24px;
+}
+
+.auth-panel {
+  width: min(560px, 100%);
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 28px;
+  box-shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
+  padding: 28px;
+}
+
+.auth-form {
+  margin-top: 20px;
+}
+
+.toggle-pill {
+  border: 1px solid rgba(23, 32, 51, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  padding: 10px 14px;
+}
+
+.toggle-pill.active {
+  background: #172033;
+  border-color: #172033;
+  color: white;
 }
 
 .list-card {
@@ -347,6 +446,11 @@ textarea {
 
   .app-footer,
   .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
     align-items: flex-start;
     flex-direction: column;
   }

@@ -20,4 +20,9 @@ export class CreateEventDto {
   @IsNumber()
   @Min(0)
   price?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  capacity?: number;
 }

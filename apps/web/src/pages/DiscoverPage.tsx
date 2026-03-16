@@ -1,14 +1,17 @@
-import { mockEvents } from '../data/mockEvents';
+import { useEvents } from '../hooks/useEvents';
+import { formatEventDate, formatPrice } from '../lib/api';
 
 export function DiscoverPage() {
+  const { events, status, error } = useEvents();
+
   return (
     <section className="section">
       <div className="section-header">
         <span className="eyebrow">Discover</span>
-        <h1>Browse the first event catalogue layout</h1>
+        <h1>Browse live events from PostgreSQL</h1>
         <p>
-          This page is ready to be connected to `/api/events` once the backend
-          moves from mock services to repositories.
+          This catalogue now reads directly from `/api/events` instead of static
+          mock data.
         </p>
       </div>
 
@@ -21,19 +24,27 @@ export function DiscoverPage() {
       </div>
 
       <div className="list-grid">
-        {mockEvents.map((event) => (
+        {status === 'loading' ? <p className="notice">Loading events...</p> : null}
+        {status === 'error' ? <p className="notice error">{error}</p> : null}
+        {status === 'success' && events.length === 0 ? (
+          <p className="notice">No events in the database yet.</p>
+        ) : null}
+        {events.map((event) => (
           <article key={event.id} className="list-card">
             <div>
               <span className="pill">{event.category}</span>
               <h3>{event.title}</h3>
               <p>
-                {event.city} · {event.startsAt}
+                {event.city} / {formatEventDate(event.startsAt)}
+              </p>
+              <p className="muted">
+                Organizer: {event.organizer?.displayName ?? 'Community Host'}
               </p>
             </div>
 
             <div className="list-card-meta">
-              <strong>{event.price}</strong>
-              <span>{event.attendance}</span>
+              <strong>{formatPrice(event.price)}</strong>
+              <span>{event.capacity} spots</span>
             </div>
           </article>
         ))}

@@ -13,6 +13,12 @@ export class UserEntity {
   @Column()
   displayName!: string;
 
+  @Column()
+  passwordHash!: string;
+
+  @Column('text', { array: true, default: '{}' })
+  interests!: string[];
+
   @CreateDateColumn()
   createdAt!: Date;
 

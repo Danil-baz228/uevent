@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { validateEnvironment } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
+import { DatabaseSeederModule } from './modules/database-seeder/database-seeder.module';
 import { EventEntity } from './modules/events/entities/event.entity';
 import { EventsModule } from './modules/events/events.module';
 import { HealthModule } from './modules/health/health.module';
@@ -27,11 +28,13 @@ const databaseImports = databaseEnabled
           password: configService.get<string>('DATABASE_PASSWORD'),
           database: configService.get<string>('DATABASE_NAME'),
           entities: [UserEntity, EventEntity],
-          synchronize: false,
+          synchronize: configService.get<string>('DATABASE_SYNCHRONIZE') === 'true',
         }),
       }),
     ]
   : [];
+
+const seederImports = databaseEnabled ? [DatabaseSeederModule] : [];
 
 @Module({
   imports: [
@@ -40,6 +43,7 @@ const databaseImports = databaseEnabled
       validate: validateEnvironment,
     }),
     ...databaseImports,
+    ...seederImports,
     HealthModule,
     AuthModule,
     UsersModule,

@@ -32,6 +32,9 @@ export class EventEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   price!: number;
 
+  @Column({ default: 50 })
+  capacity!: number;
+
   @Column({ nullable: true })
   organizerId!: string | null;
 

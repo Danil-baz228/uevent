@@ -1,8 +1,44 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { mockEvents } from '../data/mockEvents';
+import { useEvents } from '../hooks/useEvents';
+import { fetchHealth, formatEventDate, formatPrice } from '../lib/api';
 
 export function HomePage() {
+  const { events, status, error } = useEvents();
+  const [apiStatus, setApiStatus] = useState('Checking API...');
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadHealth() {
+      try {
+        const payload = await fetchHealth();
+
+        if (!active) {
+          return;
+        }
+
+        setApiStatus(`${payload.service} is ${payload.status}`);
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setApiStatus('API is unavailable');
+      }
+    }
+
+    void loadHealth();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const featuredEvents = events.slice(0, 3);
+  const palette = ['sunrise', 'mint', 'night'];
+
   return (
     <>
       <section className="hero">
@@ -13,9 +49,8 @@ export function HomePage() {
             that already feel like home.
           </h1>
           <p className="hero-text">
-            The brief asks for a service that unites people with the same
-            interests. This scaffold starts with discovery, event creation, and
-            a future-ready payments flow for paid experiences.
+            The project now runs as a real full-stack MVP with React on the web,
+            NestJS on the backend, and PostgreSQL for persistence.
           </p>
           <div className="hero-actions">
             <Link to="/discover" className="primary-button">
@@ -25,41 +60,50 @@ export function HomePage() {
               Plan your first event
             </Link>
           </div>
+          <p className="status-row">{apiStatus}</p>
         </div>
 
         <div className="stat-grid">
           <article className="stat-card">
-            <strong>Interest-first</strong>
-            <p>People find events through topics, not just dates and cities.</p>
+            <strong>{events.length} live events</strong>
+            <p>The homepage is already reading rows from the API.</p>
           </article>
           <article className="stat-card">
-            <strong>Free or paid</strong>
-            <p>Stripe is already reserved in the architecture for ticketing.</p>
+            <strong>Postgres-backed</strong>
+            <p>TypeORM repositories now persist users and events in Docker.</p>
           </article>
           <article className="stat-card">
-            <strong>Community-led</strong>
-            <p>Organizers can launch intimate meetups or bigger public events.</p>
+            <strong>Create and discover</strong>
+            <p>The create-event flow writes directly to the database.</p>
           </article>
         </div>
       </section>
 
       <section className="section">
         <div className="section-header">
-          <span className="eyebrow">Starter feed</span>
-          <h2>Mock events that can become the first real API-connected cards</h2>
+          <span className="eyebrow">Live feed</span>
+          <h2>Featured events coming from the API</h2>
         </div>
 
         <div className="card-grid">
-          {mockEvents.map((event) => (
-            <article key={event.id} className={`event-card ${event.mood}`}>
+          {status === 'loading' ? <p className="notice">Loading events...</p> : null}
+          {status === 'error' ? <p className="notice error">{error}</p> : null}
+          {status === 'success' && featuredEvents.length === 0 ? (
+            <p className="notice">No events yet. Create the first one.</p>
+          ) : null}
+          {featuredEvents.map((event, index) => (
+            <article
+              key={event.id}
+              className={`event-card ${palette[index % palette.length]}`}
+            >
               <span className="pill">{event.category}</span>
               <h3>{event.title}</h3>
               <p>
-                {event.city} · {event.startsAt}
+                {event.city} / {formatEventDate(event.startsAt)}
               </p>
               <div className="event-meta">
-                <span>{event.price}</span>
-                <span>{event.attendance}</span>
+                <span>{formatPrice(event.price)}</span>
+                <span>{event.capacity} spots</span>
               </div>
             </article>
           ))}
@@ -71,8 +115,8 @@ export function HomePage() {
           <span className="eyebrow">Challenge</span>
           <h3>How do we bring together people with similar concerns?</h3>
           <p>
-            By combining profiles, events, and shared intent into one discovery
-            flow instead of scattering them across chats and spreadsheets.
+            By combining event discovery, creator visibility, and a simple
+            organizer flow in one place instead of scattered chats and docs.
           </p>
         </article>
         <article>
@@ -85,10 +129,10 @@ export function HomePage() {
         </article>
         <article>
           <span className="eyebrow">Next move</span>
-          <h3>Replace mocks with real data</h3>
+          <h3>Ready for the next milestone</h3>
           <p>
-            The UI and API are shaped to let us wire repositories, JWT auth,
-            search, and checkout without rewriting the project structure later.
+            The MVP already stores real data. Next up can be JWT auth, search,
+            participation flows, and Stripe checkout.
           </p>
         </article>
       </section>
