@@ -1,8 +1,37 @@
+import { useState } from 'react';
+
+import { createCheckoutSession, formatEventDate, formatPrice } from '../lib/api';
 import { useEvents } from '../hooks/useEvents';
-import { formatEventDate, formatPrice } from '../lib/api';
 
 export function DiscoverPage() {
   const { events, status, error } = useEvents();
+  const [activePaymentId, setActivePaymentId] = useState<string | null>(null);
+  const [paymentMessage, setPaymentMessage] = useState('');
+
+  async function handleCheckout(eventId: string) {
+    setActivePaymentId(eventId);
+    setPaymentMessage('');
+
+    try {
+      const session = await createCheckoutSession({
+        eventId,
+        quantity: 1,
+      });
+
+      if (!session.url) {
+        throw new Error('Stripe session URL was not returned by the API');
+      }
+
+      window.location.assign(session.url);
+    } catch (checkoutError) {
+      setPaymentMessage(
+        checkoutError instanceof Error
+          ? checkoutError.message
+          : 'Failed to start Stripe checkout',
+      );
+      setActivePaymentId(null);
+    }
+  }
 
   return (
     <section className="section">
@@ -22,6 +51,8 @@ export function DiscoverPage() {
         <span className="pill">Free</span>
         <span className="pill">Paid</span>
       </div>
+
+      {paymentMessage ? <p className="notice error">{paymentMessage}</p> : null}
 
       <div className="list-grid">
         {status === 'loading' ? <p className="notice">Loading events...</p> : null}
@@ -45,6 +76,18 @@ export function DiscoverPage() {
             <div className="list-card-meta">
               <strong>{formatPrice(event.price)}</strong>
               <span>{event.capacity} spots</span>
+              {event.price > 0 ? (
+                <button
+                  type="button"
+                  className="primary-button pay-button"
+                  onClick={() => void handleCheckout(event.id)}
+                  disabled={activePaymentId === event.id}
+                >
+                  {activePaymentId === event.id ? 'Opening Stripe...' : 'Buy ticket'}
+                </button>
+              ) : (
+                <span className="muted">Free entry</span>
+              )}
             </div>
           </article>
         ))}

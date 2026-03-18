@@ -33,5 +33,16 @@ export function validateEnvironment(config: RawEnv) {
     DATABASE_USER: getString(config, 'DATABASE_USER', 'postgres'),
     DATABASE_PASSWORD: getString(config, 'DATABASE_PASSWORD', 'postgres'),
     STRIPE_SECRET_KEY: getString(config, 'STRIPE_SECRET_KEY', 'sk_test_replace_me'),
+    STRIPE_CURRENCY: getString(config, 'STRIPE_CURRENCY', 'usd'),
+    STRIPE_SUCCESS_URL: getString(
+      config,
+      'STRIPE_SUCCESS_URL',
+      'http://localhost:5173/payment/success?session_id={CHECKOUT_SESSION_ID}',
+    ),
+    STRIPE_CANCEL_URL: getString(
+      config,
+      'STRIPE_CANCEL_URL',
+      'http://localhost:5173/payment/cancel',
+    ),
   };
 }

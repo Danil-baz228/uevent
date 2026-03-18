@@ -6,6 +6,8 @@ import { CreateEventPage } from './pages/CreateEventPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { PaymentCancelPage } from './pages/PaymentCancelPage';
+import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -75,6 +77,8 @@ export default function App() {
         <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment/cancel" element={<PaymentCancelPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

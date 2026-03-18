@@ -54,6 +54,23 @@ export type LoginPayload = {
   password: string;
 };
 
+export type CheckoutSessionPayload = {
+  eventId: string;
+  quantity?: number;
+};
+
+export type CheckoutSessionResponse = {
+  provider: string;
+  status: string | null;
+  sessionId: string;
+  url: string | null;
+  amount: number;
+  currency: string;
+  eventId: string;
+  eventTitle: string;
+  quantity: number;
+};
+
 export type RegisterPayload = {
   displayName: string;
   email: string;
@@ -114,6 +131,13 @@ export function createEvent(payload: CreateEventPayload, token: string) {
   return requestJson<ApiEvent>('/events', {
     method: 'POST',
     token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createCheckoutSession(payload: CheckoutSessionPayload) {
+  return requestJson<CheckoutSessionResponse>('/payments/checkout-session', {
+    method: 'POST',
     body: JSON.stringify(payload),
   });
 }
