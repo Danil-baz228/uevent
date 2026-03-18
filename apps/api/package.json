@@ -6,6 +6,10 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
+    "typeorm": "node -r ts-node/register ../../node_modules/typeorm/cli.js -d src/database/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:show": "npm run typeorm -- migration:show",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\""
   },
@@ -30,6 +34,7 @@
     "@nestjs/schematics": "^10.1.4",
     "@nestjs/testing": "^10.0.0",
     "@types/node": "^22.10.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   }
 }

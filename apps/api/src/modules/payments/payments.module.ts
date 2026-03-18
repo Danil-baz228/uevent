@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { EventEntity } from '../events/entities/event.entity';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { RegistrationsModule } from '../registrations/registrations.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([EventEntity])],
+  imports: [RegistrationsModule],
   controllers: [PaymentsController],
   providers: [PaymentsService],
 })

@@ -26,7 +26,7 @@ export function validateEnvironment(config: RawEnv) {
     APP_ORIGIN: getString(config, 'APP_ORIGIN', 'http://localhost:5173'),
     AUTH_JWT_SECRET: getString(config, 'AUTH_JWT_SECRET', 'uevent-dev-secret'),
     DATABASE_ENABLED: String(config.DATABASE_ENABLED ?? 'true'),
-    DATABASE_SYNCHRONIZE: String(config.DATABASE_SYNCHRONIZE ?? 'true'),
+    DATABASE_SYNCHRONIZE: String(config.DATABASE_SYNCHRONIZE ?? 'false'),
     DATABASE_HOST: getString(config, 'DATABASE_HOST', 'localhost'),
     DATABASE_PORT: getNumber(config, 'DATABASE_PORT', 5432),
     DATABASE_NAME: getString(config, 'DATABASE_NAME', 'uevent'),

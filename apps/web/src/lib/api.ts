@@ -62,6 +62,7 @@ export type CheckoutSessionPayload = {
 export type CheckoutSessionResponse = {
   provider: string;
   status: string | null;
+  registrationId: string;
   sessionId: string;
   url: string | null;
   amount: number;
@@ -71,10 +72,31 @@ export type CheckoutSessionResponse = {
   quantity: number;
 };
 
+export type RegistrationStatus = 'pending_payment' | 'confirmed';
+
+export type ApiRegistration = {
+  id: string;
+  eventId: string;
+  userId: string;
+  status: RegistrationStatus;
+  paymentProvider: 'free' | 'stripe';
+  quantity: number;
+  amountTotal: number;
+  stripeCheckoutSessionId: string | null;
+  stripePaymentStatus: string | null;
+  createdAt: string;
+  updatedAt: string;
+  event: ApiEvent;
+};
+
 export type RegisterPayload = {
   displayName: string;
   email: string;
   password: string;
+};
+
+export type RefreshTokenPayload = {
+  refreshToken: string;
 };
 
 type RequestOptions = RequestInit & {
@@ -135,10 +157,33 @@ export function createEvent(payload: CreateEventPayload, token: string) {
   });
 }
 
-export function createCheckoutSession(payload: CheckoutSessionPayload) {
+export function createCheckoutSession(payload: CheckoutSessionPayload, token: string) {
   return requestJson<CheckoutSessionResponse>('/payments/checkout-session', {
     method: 'POST',
+    token,
     body: JSON.stringify(payload),
+  });
+}
+
+export function confirmCheckoutSession(sessionId: string, token: string) {
+  return requestJson<ApiRegistration>('/payments/confirm-session', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+export function createRegistration(eventId: string, token: string, quantity = 1) {
+  return requestJson<ApiRegistration>('/registrations', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ eventId, quantity }),
+  });
+}
+
+export function fetchMyRegistrations(token: string) {
+  return requestJson<ApiRegistration[]>('/registrations/me', {
+    token,
   });
 }
 
@@ -151,6 +196,20 @@ export function login(payload: LoginPayload) {
 
 export function register(payload: RegisterPayload) {
   return requestJson<AuthResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function refreshSession(payload: RefreshTokenPayload) {
+  return requestJson<AuthResponse>('/auth/refresh', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function logoutSession(payload: RefreshTokenPayload) {
+  return requestJson<{ message: string }>('/auth/logout', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

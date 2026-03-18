@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { EventEntity } from '../../events/entities/event.entity';
+import { EventRegistrationEntity } from '../../registrations/entities/event-registration.entity';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -16,6 +17,9 @@ export class UserEntity {
   @Column()
   passwordHash!: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  refreshTokenHash!: string | null;
+
   @Column('text', { array: true, default: '{}' })
   interests!: string[];
 
@@ -24,4 +28,7 @@ export class UserEntity {
 
   @OneToMany(() => EventEntity, (event) => event.organizer)
   events!: EventEntity[];
+
+  @OneToMany(() => EventRegistrationEntity, (registration) => registration.user)
+  registrations!: EventRegistrationEntity[];
 }

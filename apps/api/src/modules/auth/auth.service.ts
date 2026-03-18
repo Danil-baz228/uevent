@@ -3,12 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { LoginDto } from './dto/login.dto';
+import { LogoutDto } from './dto/logout.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserEntity } from '../users/entities/user.entity';
 import {
   createAccessToken,
   createRefreshToken,
+  hashToken,
   hashPassword,
+  verifyRefreshToken,
   verifyPassword,
 } from './auth.utils';
 
@@ -36,6 +40,14 @@ export class AuthService {
     });
 
     const savedUser = await this.usersRepository.save(user);
+    const refreshToken = createRefreshToken({
+      sub: savedUser.id,
+      email: savedUser.email,
+    });
+
+    await this.usersRepository.update(savedUser.id, {
+      refreshTokenHash: hashToken(refreshToken),
+    });
 
     return {
       message: 'Registration completed',
@@ -43,10 +55,7 @@ export class AuthService {
         sub: savedUser.id,
         email: savedUser.email,
       }),
-      refreshToken: createRefreshToken({
-        sub: savedUser.id,
-        email: savedUser.email,
-      }),
+      refreshToken,
       user: this.serializeUser(savedUser),
     };
   }
@@ -60,17 +69,75 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    const refreshToken = createRefreshToken({
+      sub: user.id,
+      email: user.email,
+    });
+
+    await this.usersRepository.update(user.id, {
+      refreshTokenHash: hashToken(refreshToken),
+    });
+
     return {
       accessToken: createAccessToken({
         sub: user.id,
         email: user.email,
       }),
-      refreshToken: createRefreshToken({
+      refreshToken,
+      user: this.serializeUser(user),
+    };
+  }
+
+  async refresh(dto: RefreshTokenDto) {
+    const payload = verifyRefreshToken(dto.refreshToken);
+    const user = await this.usersRepository.findOne({
+      where: { id: payload.sub },
+    });
+
+    if (!user || !user.refreshTokenHash) {
+      throw new UnauthorizedException('Refresh session is not available');
+    }
+
+    if (user.refreshTokenHash !== hashToken(dto.refreshToken)) {
+      throw new UnauthorizedException('Refresh token was revoked');
+    }
+
+    const nextRefreshToken = createRefreshToken({
+      sub: user.id,
+      email: user.email,
+    });
+
+    await this.usersRepository.update(user.id, {
+      refreshTokenHash: hashToken(nextRefreshToken),
+    });
+
+    return {
+      accessToken: createAccessToken({
         sub: user.id,
         email: user.email,
       }),
+      refreshToken: nextRefreshToken,
       user: this.serializeUser(user),
     };
+  }
+
+  async logout(dto: LogoutDto) {
+    const payload = verifyRefreshToken(dto.refreshToken);
+    const user = await this.usersRepository.findOne({
+      where: { id: payload.sub },
+    });
+
+    if (!user || !user.refreshTokenHash) {
+      return { message: 'Logout completed' };
+    }
+
+    if (user.refreshTokenHash === hashToken(dto.refreshToken)) {
+      await this.usersRepository.update(user.id, {
+        refreshTokenHash: null,
+      });
+    }
+
+    return { message: 'Logout completed' };
   }
 
   private serializeUser(user: UserEntity) {

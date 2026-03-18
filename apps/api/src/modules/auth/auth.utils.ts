@@ -1,6 +1,10 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
-import { AuthTokenPayload, AuthenticatedUser } from './auth.types';
+import {
+  AuthTokenPayload,
+  AuthenticatedUser,
+  RefreshAuthenticatedUser,
+} from './auth.types';
 
 type JwtPayload = AuthTokenPayload & {
   iat: number;
@@ -28,6 +32,10 @@ export function hashPassword(password: string) {
   const hash = scryptSync(password, salt, 64).toString('hex');
 
   return `${salt}:${hash}`;
+}
+
+export function hashToken(token: string) {
+  return createHmac('sha256', getJwtSecret()).update(token).digest('hex');
 }
 
 export function verifyPassword(password: string, storedHash: string) {
@@ -93,4 +101,30 @@ export function verifyAccessToken(token: string) {
   }
 
   return payload as AuthenticatedUser;
+}
+
+export function verifyRefreshToken(token: string) {
+  const [header, body, signature] = token.split('.');
+
+  if (!header || !body || !signature) {
+    throw new Error('Malformed token');
+  }
+
+  const expectedSignature = signTokenPayload(`${header}.${body}`, getJwtSecret());
+
+  if (signature !== expectedSignature) {
+    throw new Error('Invalid token signature');
+  }
+
+  const payload = JSON.parse(base64UrlDecode(body)) as JwtPayload;
+
+  if (payload.type !== 'refresh') {
+    throw new Error('Invalid token type');
+  }
+
+  if (payload.exp * 1000 <= Date.now()) {
+    throw new Error('Token expired');
+  }
+
+  return payload as RefreshAuthenticatedUser;
 }

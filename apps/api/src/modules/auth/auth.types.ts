@@ -12,6 +12,14 @@ export type AuthenticatedUser = {
   exp: number;
 };
 
+export type RefreshAuthenticatedUser = {
+  sub: string;
+  email: string;
+  type: 'refresh';
+  iat: number;
+  exp: number;
+};
+
 export type AuthenticatedRequest = {
   headers: Record<string, string | string[] | undefined>;
   user?: AuthenticatedUser;

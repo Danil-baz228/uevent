@@ -11,6 +11,8 @@ import { EventEntity } from './modules/events/entities/event.entity';
 import { EventsModule } from './modules/events/events.module';
 import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { EventRegistrationEntity } from './modules/registrations/entities/event-registration.entity';
+import { RegistrationsModule } from './modules/registrations/registrations.module';
 import { UserEntity } from './modules/users/entities/user.entity';
 import { UsersModule } from './modules/users/users.module';
 
@@ -27,8 +29,8 @@ const databaseImports = databaseEnabled
           username: configService.get<string>('DATABASE_USER'),
           password: configService.get<string>('DATABASE_PASSWORD'),
           database: configService.get<string>('DATABASE_NAME'),
-          entities: [UserEntity, EventEntity],
-          synchronize: configService.get<string>('DATABASE_SYNCHRONIZE') === 'true',
+          entities: [UserEntity, EventEntity, EventRegistrationEntity],
+          synchronize: false,
         }),
       }),
     ]
@@ -48,6 +50,7 @@ const seederImports = databaseEnabled ? [DatabaseSeederModule] : [];
     AuthModule,
     UsersModule,
     EventsModule,
+    RegistrationsModule,
     PaymentsModule,
   ],
 })

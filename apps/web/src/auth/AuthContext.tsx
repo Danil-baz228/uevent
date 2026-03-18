@@ -14,6 +14,8 @@ import {
   RegisterPayload,
   fetchCurrentUser,
   login as loginRequest,
+  logoutSession,
+  refreshSession,
   register as registerRequest,
 } from '../lib/api';
 
@@ -28,6 +30,7 @@ type AuthContextValue = {
 
 type StoredSession = {
   token: string;
+  refreshToken: string;
   user: AuthUser;
 };
 
@@ -53,6 +56,7 @@ function readStoredSession(): StoredSession | null {
 function persistSession(payload: AuthResponse) {
   const session: StoredSession = {
     token: payload.accessToken,
+    refreshToken: payload.refreshToken,
     user: payload.user,
   };
 
@@ -89,16 +93,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(freshUser);
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ token: session.token, user: freshUser }),
+          JSON.stringify({
+            token: session.token,
+            refreshToken: session.refreshToken,
+            user: freshUser,
+          }),
         );
       } catch {
-        if (!active) {
-          return;
-        }
+        try {
+          const refreshedSession = await refreshSession({
+            refreshToken: session.refreshToken,
+          });
 
-        localStorage.removeItem(STORAGE_KEY);
-        setToken(null);
-        setUser(null);
+          if (!active) {
+            return;
+          }
+
+          const persistedSession = persistSession(refreshedSession);
+          setToken(persistedSession.token);
+          setUser(persistedSession.user);
+        } catch {
+          if (!active) {
+            return;
+          }
+
+          localStorage.removeItem(STORAGE_KEY);
+          setToken(null);
+          setUser(null);
+        }
       } finally {
         if (active) {
           setIsReady(true);
@@ -121,7 +143,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(session.user);
   }
 
-  function logout() {
+  async function logout() {
+    const stored = readStoredSession();
+
+    if (stored?.refreshToken) {
+      try {
+        await logoutSession({ refreshToken: stored.refreshToken });
+      } catch {
+        // We still clear the local session even if the server-side logout fails.
+      }
+    }
+
     localStorage.removeItem(STORAGE_KEY);
     setToken(null);
     setUser(null);

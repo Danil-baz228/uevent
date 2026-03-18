@@ -1,14 +1,72 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import { createCheckoutSession, formatEventDate, formatPrice } from '../lib/api';
+import { useAuth } from '../auth/AuthContext';
 import { useEvents } from '../hooks/useEvents';
+import {
+  ApiRegistration,
+  createCheckoutSession,
+  createRegistration,
+  fetchMyRegistrations,
+  formatEventDate,
+  formatPrice,
+} from '../lib/api';
 
 export function DiscoverPage() {
   const { events, status, error } = useEvents();
+  const { token, isReady } = useAuth();
+  const navigate = useNavigate();
   const [activePaymentId, setActivePaymentId] = useState<string | null>(null);
+  const [activeRegistrationId, setActiveRegistrationId] = useState<string | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
+  const [registrations, setRegistrations] = useState<ApiRegistration[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRegistrations() {
+      if (!token) {
+        setRegistrations([]);
+        return;
+      }
+
+      try {
+        const payload = await fetchMyRegistrations(token);
+
+        if (!active) {
+          return;
+        }
+
+        setRegistrations(payload);
+      } catch {
+        if (active) {
+          setRegistrations([]);
+        }
+      }
+    }
+
+    void loadRegistrations();
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  function requireAuth() {
+    if (token) {
+      return true;
+    }
+
+    setPaymentMessage('Please sign in before joining or buying a ticket.');
+    navigate('/auth');
+    return false;
+  }
 
   async function handleCheckout(eventId: string) {
+    if (!requireAuth() || !token) {
+      return;
+    }
+
     setActivePaymentId(eventId);
     setPaymentMessage('');
 
@@ -16,7 +74,7 @@ export function DiscoverPage() {
       const session = await createCheckoutSession({
         eventId,
         quantity: 1,
-      });
+      }, token);
 
       if (!session.url) {
         throw new Error('Stripe session URL was not returned by the API');
@@ -31,6 +89,37 @@ export function DiscoverPage() {
       );
       setActivePaymentId(null);
     }
+  }
+
+  async function handleFreeRegistration(eventId: string) {
+    if (!requireAuth() || !token) {
+      return;
+    }
+
+    setActiveRegistrationId(eventId);
+    setPaymentMessage('');
+
+    try {
+      const registration = await createRegistration(eventId, token);
+
+      setRegistrations((current) => {
+        const rest = current.filter((item) => item.eventId !== registration.eventId);
+        return [registration, ...rest];
+      });
+      setPaymentMessage('You are registered for this free event.');
+    } catch (registrationError) {
+      setPaymentMessage(
+        registrationError instanceof Error
+          ? registrationError.message
+          : 'Failed to register for the event',
+      );
+    } finally {
+      setActiveRegistrationId(null);
+    }
+  }
+
+  function getRegistration(eventId: string) {
+    return registrations.find((registration) => registration.eventId === eventId);
   }
 
   return (
@@ -76,7 +165,11 @@ export function DiscoverPage() {
             <div className="list-card-meta">
               <strong>{formatPrice(event.price)}</strong>
               <span>{event.capacity} spots</span>
-              {event.price > 0 ? (
+              {getRegistration(event.id)?.status === 'confirmed' ? (
+                <span className="pill status-pill">Registered</span>
+              ) : getRegistration(event.id)?.status === 'pending_payment' ? (
+                <span className="pill status-pill">Payment pending</span>
+              ) : event.price > 0 ? (
                 <button
                   type="button"
                   className="primary-button pay-button"
@@ -86,7 +179,14 @@ export function DiscoverPage() {
                   {activePaymentId === event.id ? 'Opening Stripe...' : 'Buy ticket'}
                 </button>
               ) : (
-                <span className="muted">Free entry</span>
+                <button
+                  type="button"
+                  className="secondary-button pay-button"
+                  onClick={() => void handleFreeRegistration(event.id)}
+                  disabled={!isReady || activeRegistrationId === event.id}
+                >
+                  {activeRegistrationId === event.id ? 'Joining...' : 'Join event'}
+                </button>
               )}
             </div>
           </article>

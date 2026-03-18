@@ -1,10 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import Stripe from 'stripe';
-import { Repository } from 'typeorm';
 
-import { EventEntity } from '../events/entities/event.entity';
+import { RegistrationsService } from '../registrations/registrations.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 
 @Injectable()
@@ -15,8 +17,7 @@ export class PaymentsService {
   private readonly cancelUrl: string;
 
   constructor(
-    @InjectRepository(EventEntity)
-    private readonly eventsRepository: Repository<EventEntity>,
+    private readonly registrationsService: RegistrationsService,
     private readonly configService: ConfigService,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
@@ -37,24 +38,15 @@ export class PaymentsService {
     );
   }
 
-  async createCheckoutSession(dto: CreateCheckoutSessionDto) {
-    const event = await this.eventsRepository.findOne({
-      where: { id: dto.eventId },
-    });
-
-    if (!event) {
-      throw new NotFoundException(`Event ${dto.eventId} was not found`);
-    }
-
-    const amount = Number(event.price);
-
-    if (amount <= 0) {
-      throw new BadRequestException(
-        'This event is free and does not require Stripe checkout',
-      );
-    }
-
+  async createCheckoutSession(dto: CreateCheckoutSessionDto, userId: string) {
     const quantity = dto.quantity ?? 1;
+    const { registration, event } =
+      await this.registrationsService.createPendingStripeRegistration(
+        dto.eventId,
+        userId,
+        quantity,
+      );
+    const amount = Number(event.price);
     const unitAmount = Math.round(amount * 100);
     const session = await this.stripe.checkout.sessions.create({
       mode: 'payment',
@@ -75,13 +67,22 @@ export class PaymentsService {
       ],
       metadata: {
         eventId: event.id,
+        registrationId: registration.id,
+        userId,
         quantity: String(quantity),
       },
     });
 
+    await this.registrationsService.attachCheckoutSession(
+      registration.id,
+      session.id,
+      session.payment_status,
+    );
+
     return {
       provider: 'stripe',
       status: session.payment_status,
+      registrationId: registration.id,
       sessionId: session.id,
       url: session.url,
       amount: unitAmount,
@@ -90,5 +91,31 @@ export class PaymentsService {
       eventTitle: event.title,
       quantity,
     };
+  }
+
+  async confirmCheckoutSession(sessionId: string, userId: string) {
+    const registration = await this.registrationsService.findOneBySessionId(
+      sessionId,
+      userId,
+    );
+    const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+
+    if (!session) {
+      throw new NotFoundException(`Stripe checkout session ${sessionId} was not found`);
+    }
+
+    await this.registrationsService.markStripePaymentStatus(
+      registration.id,
+      session.payment_status,
+    );
+
+    if (session.payment_status !== 'paid') {
+      throw new BadRequestException('Payment is not completed yet');
+    }
+
+    return this.registrationsService.confirmStripeRegistration(
+      registration,
+      session.payment_status,
+    );
   }
 }

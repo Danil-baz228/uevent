@@ -4,9 +4,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { EventRegistrationEntity } from '../../registrations/entities/event-registration.entity';
 import { UserEntity } from '../../users/entities/user.entity';
 
 @Entity({ name: 'events' })
@@ -44,4 +46,7 @@ export class EventEntity {
   @ManyToOne(() => UserEntity, (user) => user.events, { nullable: true })
   @JoinColumn({ name: 'organizerId' })
   organizer!: UserEntity | null;
+
+  @OneToMany(() => EventRegistrationEntity, (registration) => registration.event)
+  registrations!: EventRegistrationEntity[];
 }
