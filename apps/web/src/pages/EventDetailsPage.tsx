@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import {
   ApiRegistration,
   EventDetailsResponse,
@@ -22,6 +23,7 @@ import {
 export function EventDetailsPage() {
   const { eventId = '' } = useParams();
   const { token, isReady, user } = useAuth();
+  const { copy, locale, translateCategory } = useLanguage();
   const navigate = useNavigate();
   const [event, setEvent] = useState<EventDetailsResponse | null>(null);
   const [registration, setRegistration] = useState<ApiRegistration | null>(null);
@@ -81,7 +83,7 @@ export function EventDetailsPage() {
         }
 
         setStatus('error');
-        setMessage(error instanceof Error ? error.message : 'Failed to load event');
+        setMessage(error instanceof Error ? error.message : copy.eventDetails.openErrorFallback);
       }
     }
 
@@ -146,9 +148,9 @@ export function EventDetailsPage() {
     try {
       const createdRegistration = await createRegistration(event.id, token);
       setRegistration(createdRegistration);
-      setMessage('You are registered for this event.');
+      setMessage(copy.eventDetails.joinSuccess);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to join event');
+      setMessage(error instanceof Error ? error.message : copy.eventDetails.joinFailed);
     } finally {
       setActionState('idle');
     }
@@ -170,13 +172,13 @@ export function EventDetailsPage() {
       );
 
       if (!session.url) {
-        throw new Error('Stripe session URL was not returned by the API');
+        throw new Error(copy.eventDetails.buyFailed);
       }
 
       window.location.assign(session.url);
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : 'Failed to start Stripe checkout',
+        error instanceof Error ? error.message : copy.eventDetails.buyFailed,
       );
       setActionState('idle');
     }
@@ -240,7 +242,7 @@ export function EventDetailsPage() {
       setActiveCommentId(null);
     } catch (error) {
       setCommentMessage(
-        error instanceof Error ? error.message : 'Failed to add comment',
+        error instanceof Error ? error.message : copy.eventDetails.commentFailed,
       );
     } finally {
       setCommentStatus('idle');
@@ -273,7 +275,7 @@ export function EventDetailsPage() {
       }
     } catch (error) {
       setCommentMessage(
-        error instanceof Error ? error.message : 'Failed to delete comment',
+        error instanceof Error ? error.message : copy.eventDetails.commentDeleteFailed,
       );
     }
   }
@@ -320,14 +322,14 @@ export function EventDetailsPage() {
       setMessage(
         field === 'hideAttendeeNames'
           ? value
-            ? 'Attendee names are now hidden.'
-            : 'Attendee names are visible again.'
+            ? copy.eventDetails.hideNamesEnabled
+            : copy.eventDetails.hideNamesDisabled
           : value
-            ? 'Comments are now closed.'
-            : 'Comments are open again.',
+            ? copy.eventDetails.commentsClosedEnabled
+            : copy.eventDetails.commentsClosedDisabled,
       );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update event settings');
+      setMessage(error instanceof Error ? error.message : copy.eventDetails.updateFailed);
     } finally {
       setSettingsStatus('idle');
     }
@@ -364,9 +366,9 @@ export function EventDetailsPage() {
       setPosterPreview(getEventPosterUrl(updatedEvent));
       setSelectedPoster(null);
       setIsEditMode(false);
-      setMessage('Event details updated.');
+      setMessage(copy.eventDetails.eventUpdated);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to update event');
+      setMessage(error instanceof Error ? error.message : copy.eventDetails.updateFailed);
     } finally {
       setSettingsStatus('idle');
     }
@@ -378,7 +380,7 @@ export function EventDetailsPage() {
     }
 
     const isConfirmed = window.confirm(
-      'Delete this event? This will also remove registrations and comments.',
+      copy.eventDetails.deleteConfirm,
     );
 
     if (!isConfirmed) {
@@ -392,7 +394,7 @@ export function EventDetailsPage() {
       await deleteEvent(event.id, token);
       navigate('/discover');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to delete event');
+      setMessage(error instanceof Error ? error.message : copy.eventDetails.deleteFailed);
       setSettingsStatus('idle');
     }
   }
@@ -419,21 +421,21 @@ export function EventDetailsPage() {
 
   function getReplyTargetName(commentId: string) {
     const parentComment = commentLookup.get(commentId);
-    return parentComment?.author.displayName ?? 'user';
+    return parentComment?.author.displayName ?? copy.common.communityHost;
   }
 
   if (status === 'loading') {
-    return <p className="notice">Loading event details...</p>;
+    return <p className="notice">{copy.eventDetails.loading}</p>;
   }
 
   if (status === 'error' || !event) {
     return (
       <section className="empty-state">
-        <span className="eyebrow">Event details</span>
-        <h1>Unable to open this event.</h1>
-        <p>{message || 'The requested event could not be found.'}</p>
+        <span className="eyebrow">{copy.common.eventDetails}</span>
+        <h1>{copy.eventDetails.openErrorTitle}</h1>
+        <p>{message || copy.eventDetails.openErrorFallback}</p>
         <Link to="/discover" className="primary-button">
-          Back to discover
+          {copy.common.backToDiscover}
         </Link>
       </section>
     );
@@ -448,10 +450,10 @@ export function EventDetailsPage() {
             alt={`${event.title} poster`}
             className="event-poster-large"
           />
-          <span className="pill">{event.category}</span>
+          <span className="pill">{translateCategory(event.category)}</span>
           <h1>{event.title}</h1>
           <p className="muted">
-            {event.city} / {formatEventDate(event.startsAt)}
+            {event.city} / {formatEventDate(event.startsAt, locale)}
           </p>
           <p>{event.description}</p>
         </article>
@@ -460,11 +462,9 @@ export function EventDetailsPage() {
           <article className="form-card organizer-settings-card">
             <div className="settings-header">
               <div>
-                <span className="eyebrow">Event settings</span>
-                <h2>Manage your event</h2>
-                <p className="muted">
-                  Control visibility, discussion, and the event presentation from one place.
-                </p>
+                <span className="eyebrow">{copy.eventDetails.organizerSettingsEyebrow}</span>
+                <h2>{copy.eventDetails.organizerSettingsTitle}</h2>
+                <p className="muted">{copy.eventDetails.organizerSettingsText}</p>
               </div>
             </div>
 
@@ -480,11 +480,11 @@ export function EventDetailsPage() {
                   )
                 }
               >
-                <strong>Hide attendee names</strong>
+                <strong>{copy.eventDetails.hideNamesTitle}</strong>
                 <span className="muted">
                   {event.hideAttendeeNames
-                    ? 'Visitor list is anonymized for viewers.'
-                    : 'Visitor names are currently visible.'}
+                    ? copy.eventDetails.hideNamesOn
+                    : copy.eventDetails.hideNamesOff}
                 </span>
               </button>
 
@@ -496,11 +496,11 @@ export function EventDetailsPage() {
                   void handleOrganizerSetting('commentsClosed', !event.commentsClosed)
                 }
               >
-                <strong>Close comments</strong>
+                <strong>{copy.eventDetails.closeCommentsTitle}</strong>
                 <span className="muted">
                   {event.commentsClosed
-                    ? 'New comments are currently blocked.'
-                    : 'Visitors can join the discussion.'}
+                    ? copy.eventDetails.closeCommentsOn
+                    : copy.eventDetails.closeCommentsOff}
                 </span>
               </button>
 
@@ -510,10 +510,12 @@ export function EventDetailsPage() {
                 disabled={settingsStatus === 'saving'}
                 onClick={() => setIsEditMode((current) => !current)}
               >
-                <strong>{isEditMode ? 'Close editor' : 'Edit event'}</strong>
-                <span className="muted">
-                  Update poster, title, timing, ticket price, and capacity.
-                </span>
+                <strong>
+                  {isEditMode
+                    ? copy.eventDetails.editEventClose
+                    : copy.eventDetails.editEventOpen}
+                </strong>
+                <span className="muted">{copy.eventDetails.editEventText}</span>
               </button>
             </div>
 
@@ -521,7 +523,7 @@ export function EventDetailsPage() {
               <form className="settings-editor" onSubmit={handleEventUpdate}>
                 <div className="form-grid">
                   <label className="field">
-                    <span>Title</span>
+                    <span>{copy.create.titleLabel}</span>
                     <input
                       value={editForm.title}
                       onChange={(event) =>
@@ -534,7 +536,7 @@ export function EventDetailsPage() {
                     />
                   </label>
                   <label className="field">
-                    <span>Category</span>
+                    <span>{copy.create.categoryLabel}</span>
                     <input
                       value={editForm.category}
                       onChange={(event) =>
@@ -549,7 +551,7 @@ export function EventDetailsPage() {
                 </div>
 
                 <label className="field">
-                  <span>Description</span>
+                  <span>{copy.create.descriptionLabel}</span>
                   <textarea
                     rows={4}
                     value={editForm.description}
@@ -565,7 +567,7 @@ export function EventDetailsPage() {
 
                 <div className="form-grid">
                   <label className="field">
-                    <span>City</span>
+                    <span>{copy.create.cityLabel}</span>
                     <input
                       value={editForm.city}
                       onChange={(event) =>
@@ -578,7 +580,7 @@ export function EventDetailsPage() {
                     />
                   </label>
                   <label className="field">
-                    <span>Date and time</span>
+                    <span>{copy.create.dateTimeLabel}</span>
                     <input
                       type="datetime-local"
                       value={editForm.startsAt}
@@ -595,7 +597,7 @@ export function EventDetailsPage() {
 
                 <div className="form-grid">
                   <label className="field">
-                    <span>Ticket price</span>
+                    <span>{copy.create.priceLabel}</span>
                     <input
                       type="number"
                       min="0"
@@ -609,7 +611,7 @@ export function EventDetailsPage() {
                     />
                   </label>
                   <label className="field">
-                    <span>Capacity</span>
+                    <span>{copy.create.capacityLabel}</span>
                     <input
                       type="number"
                       min="1"
@@ -625,7 +627,7 @@ export function EventDetailsPage() {
                 </div>
 
                 <label className="field">
-                  <span>Replace poster</span>
+                  <span>{copy.eventDetails.replacePoster}</span>
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
@@ -654,7 +656,7 @@ export function EventDetailsPage() {
                     className="primary-button"
                     disabled={settingsStatus === 'saving'}
                   >
-                    {settingsStatus === 'saving' ? 'Saving...' : 'Save changes'}
+                    {settingsStatus === 'saving' ? copy.common.saving : copy.common.saveChanges}
                   </button>
                   <button
                     type="button"
@@ -662,7 +664,7 @@ export function EventDetailsPage() {
                     disabled={settingsStatus === 'saving'}
                     onClick={() => void handleDeleteEvent()}
                   >
-                    Delete event
+                    {copy.eventDetails.deleteEvent}
                   </button>
                 </div>
               </form>
@@ -671,30 +673,30 @@ export function EventDetailsPage() {
         ) : null}
 
         <article className="form-card">
-          <span className="eyebrow">Comments</span>
+          <span className="eyebrow">{copy.eventDetails.commentsEyebrow}</span>
           {event.commentsClosed ? (
-            <p className="notice">The organizer has closed comments for this event.</p>
+            <p className="notice">{copy.eventDetails.commentsClosed}</p>
           ) : token ? (
             <form className="comment-form" onSubmit={handleCommentSubmit}>
               {commentMode !== 'create' ? (
                 <div className="comment-mode-row">
                   <span className="pill">
                     {commentMode === 'reply'
-                      ? `Replying to @${replyTargetName ?? 'user'}`
-                      : 'Edit mode'}
+                      ? copy.eventDetails.replyingTo(replyTargetName ?? copy.common.communityHost)
+                      : copy.eventDetails.editMode}
                   </span>
                   <button
                     type="button"
                     className="secondary-button"
                     onClick={cancelCommentAction}
                   >
-                    Cancel
+                    {copy.common.cancel}
                   </button>
                 </div>
               ) : null}
               <textarea
                 rows={4}
-                placeholder="Share your thoughts about this event"
+                placeholder={copy.eventDetails.commentPlaceholder}
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
                 required
@@ -705,22 +707,22 @@ export function EventDetailsPage() {
                 disabled={commentStatus === 'saving'}
               >
                 {commentStatus === 'saving'
-                  ? 'Posting...'
+                  ? copy.common.posting
                   : commentMode === 'edit'
-                    ? 'Save changes'
+                    ? copy.common.saveChanges
                     : commentMode === 'reply'
-                      ? 'Post reply'
-                      : 'Post comment'}
+                      ? copy.common.postReply
+                      : copy.common.postComment}
               </button>
             </form>
           ) : (
-            <p className="muted">Sign in to join the event discussion.</p>
+            <p className="muted">{copy.eventDetails.signInToDiscuss}</p>
           )}
 
           {commentMessage ? <p className="notice error">{commentMessage}</p> : null}
 
           {event.comments.length === 0 ? (
-            <p className="muted">No comments yet.</p>
+            <p className="muted">{copy.common.noComments}</p>
           ) : (
             <div className="related-list">
               {topLevelComments.map((item) => (
@@ -734,7 +736,7 @@ export function EventDetailsPage() {
                     }
                   >
                     <strong>{item.author.displayName}</strong>
-                    <span className="muted">{formatEventDate(item.createdAt)}</span>
+                    <span className="muted">{formatEventDate(item.createdAt, locale)}</span>
                     <span>{item.content}</span>
                     {activeCommentId === item.id ? (
                       <div className="comment-actions">
@@ -746,7 +748,7 @@ export function EventDetailsPage() {
                             startReply(item.id, item.author.displayName);
                           }}
                         >
-                          Reply
+                          {copy.common.reply}
                         </button>
                         {user?.id === item.author.id ? (
                           <>
@@ -758,7 +760,7 @@ export function EventDetailsPage() {
                                 startEdit(item.id, item.content);
                               }}
                             >
-                              Edit
+                              {copy.common.edit}
                             </button>
                             <button
                               type="button"
@@ -768,7 +770,7 @@ export function EventDetailsPage() {
                                 void handleDeleteComment(item.id);
                               }}
                             >
-                              Delete
+                              {copy.common.delete}
                             </button>
                           </>
                         ) : null}
@@ -787,10 +789,10 @@ export function EventDetailsPage() {
                       }
                     >
                       <strong>{reply.author.displayName}</strong>
-                      <span className="muted">{formatEventDate(reply.createdAt)}</span>
+                      <span className="muted">{formatEventDate(reply.createdAt, locale)}</span>
                       {reply.parentCommentId ? (
                         <span className="reply-target">
-                          Reply to @{getReplyTargetName(reply.parentCommentId)}
+                          {copy.common.reply} @{getReplyTargetName(reply.parentCommentId)}
                         </span>
                       ) : null}
                       <span>{reply.content}</span>
@@ -804,7 +806,7 @@ export function EventDetailsPage() {
                               startReply(reply.id, reply.author.displayName);
                             }}
                           >
-                            Reply
+                            {copy.common.reply}
                           </button>
                           {user?.id === reply.author.id ? (
                             <>
@@ -816,7 +818,7 @@ export function EventDetailsPage() {
                                   startEdit(reply.id, reply.content);
                                 }}
                               >
-                                Edit
+                                {copy.common.edit}
                               </button>
                               <button
                                 type="button"
@@ -826,7 +828,7 @@ export function EventDetailsPage() {
                                   void handleDeleteComment(reply.id);
                                 }}
                               >
-                                Delete
+                                {copy.common.delete}
                               </button>
                             </>
                           ) : null}
@@ -843,17 +845,17 @@ export function EventDetailsPage() {
 
       <aside className="details-sidebar">
         <article className="form-card">
-          <span className="eyebrow">Ticket</span>
-          <strong>{formatPrice(event.price)}</strong>
-          <p className="muted">{event.capacity} total spots</p>
+          <span className="eyebrow">{copy.eventDetails.ticketEyebrow}</span>
+          <strong>{formatPrice(event.price, locale, copy.common.free)}</strong>
+          <p className="muted">{copy.common.totalSpots(event.capacity)}</p>
           <p className="muted">
-            Organizer: {event.organizer?.displayName ?? 'Community Host'}
+            {copy.common.organizer}: {event.organizer?.displayName ?? copy.common.communityHost}
           </p>
 
           {registration?.status === 'confirmed' ? (
-            <p className="notice success">You are already registered for this event.</p>
+            <p className="notice success">{copy.eventDetails.registrationConfirmed}</p>
           ) : registration?.status === 'pending_payment' ? (
-            <p className="notice">Payment is pending for this event.</p>
+            <p className="notice">{copy.common.paymentPending}</p>
           ) : event.price > 0 ? (
             <button
               type="button"
@@ -861,7 +863,7 @@ export function EventDetailsPage() {
               disabled={!isReady || actionState === 'paying'}
               onClick={() => void handleCheckout()}
             >
-              {actionState === 'paying' ? 'Opening Stripe...' : 'Buy ticket'}
+              {actionState === 'paying' ? copy.common.openingStripe : copy.common.buyTicket}
             </button>
           ) : (
             <button
@@ -870,32 +872,30 @@ export function EventDetailsPage() {
               disabled={!isReady || actionState === 'joining'}
               onClick={() => void handleFreeJoin()}
             >
-              {actionState === 'joining' ? 'Joining...' : 'Join event'}
+              {actionState === 'joining' ? copy.common.joining : copy.common.joinEvent}
             </button>
           )}
 
           {message ? <p className="notice">{message}</p> : null}
           <Link to="/discover" className="secondary-button">
-            Back to discover
+            {copy.common.backToDiscover}
           </Link>
         </article>
 
         <article className="form-card">
-          <span className="eyebrow">Attendees</span>
+          <span className="eyebrow">{copy.eventDetails.attendeesEyebrow}</span>
           {event.attendees.length === 0 ? (
-            <p className="muted">No confirmed attendees yet.</p>
+            <p className="muted">{copy.eventDetails.noAttendees}</p>
           ) : (
             <div className="related-list">
               {event.hideAttendeeNames ? (
-                <p className="muted">
-                  The organizer has hidden attendee names for this event.
-                </p>
+                <p className="muted">{copy.eventDetails.attendeeNamesHidden}</p>
               ) : null}
               {event.attendees.map((attendee) => (
                 <div key={attendee.id} className="related-card">
                   <strong>{attendee.displayName}</strong>
                   <span className="muted">
-                    Joined {formatEventDate(attendee.joinedAt)}
+                    {formatEventDate(attendee.joinedAt, locale)}
                   </span>
                 </div>
               ))}
@@ -904,16 +904,16 @@ export function EventDetailsPage() {
         </article>
 
         <article className="form-card">
-          <span className="eyebrow">More from organizer</span>
+          <span className="eyebrow">{copy.eventDetails.moreFromOrganizer}</span>
           {event.organizerEvents.length === 0 ? (
-            <p className="muted">No other published events from this organizer yet.</p>
+            <p className="muted">{copy.eventDetails.noOrganizerEvents}</p>
           ) : (
             <div className="related-list">
               {event.organizerEvents.map((item) => (
                 <Link key={item.id} to={`/events/${item.id}`} className="related-card">
                   <strong>{item.title}</strong>
                   <span className="muted">
-                    {item.city} / {formatEventDate(item.startsAt)}
+                    {item.city} / {formatEventDate(item.startsAt, locale)}
                   </span>
                 </Link>
               ))}
@@ -922,16 +922,17 @@ export function EventDetailsPage() {
         </article>
 
         <article className="form-card">
-          <span className="eyebrow">Similar events</span>
+          <span className="eyebrow">{copy.eventDetails.similarEvents}</span>
           {event.similarEvents.length === 0 ? (
-            <p className="muted">No similar events found yet.</p>
+            <p className="muted">{copy.eventDetails.noSimilarEvents}</p>
           ) : (
             <div className="related-list">
               {event.similarEvents.map((item) => (
                 <Link key={item.id} to={`/events/${item.id}`} className="related-card">
                   <strong>{item.title}</strong>
                   <span className="muted">
-                    {item.category} / {formatPrice(item.price)}
+                    {translateCategory(item.category)} /{' '}
+                    {formatPrice(item.price, locale, copy.common.free)}
                   </span>
                 </Link>
               ))}

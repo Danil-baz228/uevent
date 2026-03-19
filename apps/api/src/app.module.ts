@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { isDatabaseEnabled } from './config/database-mode';
 import { validateEnvironment } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommentsModule } from './modules/comments/comments.module';
@@ -15,12 +16,11 @@ import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { EventRegistrationEntity } from './modules/registrations/entities/event-registration.entity';
 import { RegistrationsModule } from './modules/registrations/registrations.module';
+import { InMemoryDataModule } from './modules/in-memory-data/in-memory-data.module';
 import { UserEntity } from './modules/users/entities/user.entity';
 import { UsersModule } from './modules/users/users.module';
 
-const databaseEnabled = process.env.DATABASE_ENABLED !== 'false';
-
-const databaseImports = databaseEnabled
+const databaseImports = isDatabaseEnabled
   ? [
       TypeOrmModule.forRootAsync({
         inject: [ConfigService],
@@ -38,7 +38,7 @@ const databaseImports = databaseEnabled
     ]
   : [];
 
-const seederImports = databaseEnabled ? [DatabaseSeederModule] : [];
+const seederImports = isDatabaseEnabled ? [DatabaseSeederModule] : [];
 
 @Module({
   imports: [
@@ -46,6 +46,7 @@ const seederImports = databaseEnabled ? [DatabaseSeederModule] : [];
       isGlobal: true,
       validate: validateEnvironment,
     }),
+    InMemoryDataModule,
     ...databaseImports,
     ...seederImports,
     HealthModule,

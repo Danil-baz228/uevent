@@ -367,19 +367,19 @@ export function fetchCurrentUser(token: string) {
   });
 }
 
-export function formatEventDate(value: string) {
-  return new Intl.DateTimeFormat('en', {
+export function formatEventDate(value: string, locale = 'en-US') {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
 }
 
-export function formatPrice(price: number) {
+export function formatPrice(price: number, locale = 'en-US', freeLabel = 'Free') {
   if (!price) {
-    return 'Free';
+    return freeLabel;
   }
 
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,

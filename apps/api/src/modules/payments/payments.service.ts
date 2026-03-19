@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   BadRequestException,
   Injectable,
@@ -6,27 +8,31 @@ import {
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
+import { isDatabaseEnabled } from '../../config/database-mode';
 import { RegistrationsService } from '../registrations/registrations.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 
 @Injectable()
 export class PaymentsService {
-  private readonly stripe: Stripe;
+  private readonly stripe: Stripe | null;
   private readonly currency: string;
   private readonly successUrl: string;
   private readonly cancelUrl: string;
+  private readonly useMockCheckout: boolean;
 
   constructor(
     private readonly registrationsService: RegistrationsService,
     private readonly configService: ConfigService,
   ) {
+    this.useMockCheckout = !isDatabaseEnabled;
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
 
-    if (!secretKey) {
+    if (!secretKey && !this.useMockCheckout) {
       throw new Error('Missing STRIPE_SECRET_KEY');
     }
 
-    this.stripe = new Stripe(secretKey);
+    this.stripe =
+      this.useMockCheckout || !secretKey ? null : new Stripe(secretKey);
     this.currency = this.configService.get<string>('STRIPE_CURRENCY', 'usd');
     this.successUrl = this.configService.get<string>(
       'STRIPE_SUCCESS_URL',
@@ -48,6 +54,35 @@ export class PaymentsService {
       );
     const amount = Number(event.price);
     const unitAmount = Math.round(amount * 100);
+
+    if (this.useMockCheckout) {
+      const sessionId = `cs_test_${randomUUID().replace(/-/g, '')}`;
+      const url = this.successUrl.replace('{CHECKOUT_SESSION_ID}', sessionId);
+
+      await this.registrationsService.attachCheckoutSession(
+        registration.id,
+        sessionId,
+        'unpaid',
+      );
+
+      return {
+        provider: 'stripe',
+        status: 'unpaid',
+        registrationId: registration.id,
+        sessionId,
+        url,
+        amount: unitAmount,
+        currency: this.currency,
+        eventId: event.id,
+        eventTitle: event.title,
+        quantity,
+      };
+    }
+
+    if (!this.stripe) {
+      throw new Error('Stripe client is not initialized');
+    }
+
     const session = await this.stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: this.successUrl,
@@ -98,6 +133,23 @@ export class PaymentsService {
       sessionId,
       userId,
     );
+
+    if (this.useMockCheckout) {
+      await this.registrationsService.markStripePaymentStatus(
+        registration.id,
+        'paid',
+      );
+
+      return this.registrationsService.confirmStripeRegistration(
+        registration,
+        'paid',
+      );
+    }
+
+    if (!this.stripe) {
+      throw new Error('Stripe client is not initialized');
+    }
+
     const session = await this.stripe.checkout.sessions.retrieve(sessionId);
 
     if (!session) {

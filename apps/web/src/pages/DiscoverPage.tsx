@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
-import { useEvents } from '../hooks/useEvents';
+import { useLanguage } from '../i18n/LanguageContext';
 import {
   ApiRegistration,
   createCheckoutSession,
@@ -12,10 +12,12 @@ import {
   formatPrice,
   getEventPosterUrl,
 } from '../lib/api';
+import { useEvents } from '../hooks/useEvents';
 
 export function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { token, isReady } = useAuth();
+  const { copy, locale, translateCategory } = useLanguage();
   const query = searchParams.get('q') ?? '';
   const category = searchParams.get('category') ?? 'all';
   const priceType = searchParams.get('priceType') ?? 'all';
@@ -68,7 +70,7 @@ export function DiscoverPage() {
       return true;
     }
 
-    setPaymentMessage('Please sign in before joining or buying a ticket.');
+    setPaymentMessage(copy.discover.signInRequired);
     window.location.assign('/auth');
     return false;
   }
@@ -82,21 +84,22 @@ export function DiscoverPage() {
     setPaymentMessage('');
 
     try {
-      const session = await createCheckoutSession({
-        eventId,
-        quantity: 1,
-      }, token);
+      const session = await createCheckoutSession(
+        {
+          eventId,
+          quantity: 1,
+        },
+        token,
+      );
 
       if (!session.url) {
-        throw new Error('Stripe session URL was not returned by the API');
+        throw new Error(copy.eventDetails.buyFailed);
       }
 
       window.location.assign(session.url);
     } catch (checkoutError) {
       setPaymentMessage(
-        checkoutError instanceof Error
-          ? checkoutError.message
-          : 'Failed to start Stripe checkout',
+        checkoutError instanceof Error ? checkoutError.message : copy.eventDetails.buyFailed,
       );
       setActivePaymentId(null);
     }
@@ -117,12 +120,10 @@ export function DiscoverPage() {
         const rest = current.filter((item) => item.eventId !== registration.eventId);
         return [registration, ...rest];
       });
-      setPaymentMessage('You are registered for this free event.');
+      setPaymentMessage(copy.eventDetails.joinSuccess);
     } catch (registrationError) {
       setPaymentMessage(
-        registrationError instanceof Error
-          ? registrationError.message
-          : 'Failed to register for the event',
+        registrationError instanceof Error ? registrationError.message : copy.eventDetails.joinFailed,
       );
     } finally {
       setActiveRegistrationId(null);
@@ -153,48 +154,45 @@ export function DiscoverPage() {
 
   return (
     <section className="section">
-      <div className="section-header">
-        <span className="eyebrow">Discover</span>
-        <h1>Browse live events from PostgreSQL</h1>
-        <p>
-          This catalogue now reads directly from `/api/events` instead of static
-          mock data.
-        </p>
+      <div className="section-header section-header-panel">
+        <span className="eyebrow">{copy.discover.eyebrow}</span>
+        <h1>{copy.discover.title}</h1>
+        <p>{copy.discover.text}</p>
       </div>
 
-      <div className="discover-toolbar">
+      <div className="discover-toolbar discover-surface">
         <label className="field search-field">
-          <span>Search</span>
+          <span>{copy.common.search}</span>
           <input
             value={query}
-            placeholder="Title, city, or description"
+            placeholder={copy.discover.searchPlaceholder}
             onChange={(event) => updateQuery({ q: event.target.value })}
           />
         </label>
 
         <div className="filter-grid">
           <label className="field compact-field">
-            <span>Category</span>
+            <span>{copy.common.category}</span>
             <select
               value={category}
               onChange={(event) => updateQuery({ category: event.target.value })}
             >
-              <option value="all">All</option>
-              <option value="Networking">Networking</option>
-              <option value="Workshop">Workshop</option>
-              <option value="Meetup">Meetup</option>
+              <option value="all">{copy.common.all}</option>
+              <option value="Networking">{translateCategory('Networking')}</option>
+              <option value="Workshop">{translateCategory('Workshop')}</option>
+              <option value="Meetup">{translateCategory('Meetup')}</option>
             </select>
           </label>
 
           <label className="field compact-field">
-            <span>Price</span>
+            <span>{copy.common.price}</span>
             <select
               value={priceType}
               onChange={(event) => updateQuery({ priceType: event.target.value })}
             >
-              <option value="all">All</option>
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
+              <option value="all">{copy.common.all}</option>
+              <option value="free">{copy.common.free}</option>
+              <option value="paid">{copy.common.paid}</option>
             </select>
           </label>
         </div>
@@ -203,15 +201,15 @@ export function DiscoverPage() {
       {paymentMessage ? <p className="notice error">{paymentMessage}</p> : null}
       {meta ? (
         <p className="muted results-summary">
-          Showing {events.length} of {meta.total} events
+          {copy.discover.resultsSummary(events.length, meta.total)}
         </p>
       ) : null}
 
       <div className="list-grid">
-        {status === 'loading' ? <p className="notice">Loading events...</p> : null}
+        {status === 'loading' ? <p className="notice">{copy.common.loadingEvents}</p> : null}
         {status === 'error' ? <p className="notice error">{error}</p> : null}
         {status === 'success' && events.length === 0 ? (
-          <p className="notice">No events in the database yet.</p>
+          <p className="notice">{copy.discover.noEvents}</p>
         ) : null}
         {events.map((event) => (
           <article key={event.id} className="list-card">
@@ -222,31 +220,32 @@ export function DiscoverPage() {
                 className="event-poster-thumb"
               />
               <div>
-                <span className="pill">{event.category}</span>
+                <span className="pill">{translateCategory(event.category)}</span>
                 <h3>
                   <Link to={`/events/${event.id}`} className="event-link">
                     {event.title}
                   </Link>
                 </h3>
                 <p>
-                  {event.city} / {formatEventDate(event.startsAt)}
+                  {event.city} / {formatEventDate(event.startsAt, locale)}
                 </p>
                 <p className="muted">
-                  Organizer: {event.organizer?.displayName ?? 'Community Host'}
+                  {copy.common.organizer}:{' '}
+                  {event.organizer?.displayName ?? copy.discover.organizerFallback}
                 </p>
-                <Link to={`/events/${event.id}`} className="muted event-detail-link">
-                  Open event details
+                <Link to={`/events/${event.id}`} className="inline-link">
+                  {copy.discover.openEventDetails}
                 </Link>
               </div>
             </div>
 
             <div className="list-card-meta">
-              <strong>{formatPrice(event.price)}</strong>
-              <span>{event.capacity} spots</span>
+              <strong>{formatPrice(event.price, locale, copy.common.free)}</strong>
+              <span>{event.capacity} {copy.common.spots}</span>
               {getRegistration(event.id)?.status === 'confirmed' ? (
-                <span className="pill status-pill">Registered</span>
+                <span className="pill status-pill">{copy.common.registered}</span>
               ) : getRegistration(event.id)?.status === 'pending_payment' ? (
-                <span className="pill status-pill">Payment pending</span>
+                <span className="pill status-pill">{copy.common.paymentPending}</span>
               ) : event.price > 0 ? (
                 <button
                   type="button"
@@ -254,7 +253,9 @@ export function DiscoverPage() {
                   onClick={() => void handleCheckout(event.id)}
                   disabled={activePaymentId === event.id}
                 >
-                  {activePaymentId === event.id ? 'Opening Stripe...' : 'Buy ticket'}
+                  {activePaymentId === event.id
+                    ? copy.common.openingStripe
+                    : copy.common.buyTicket}
                 </button>
               ) : (
                 <button
@@ -263,7 +264,9 @@ export function DiscoverPage() {
                   onClick={() => void handleFreeRegistration(event.id)}
                   disabled={!isReady || activeRegistrationId === event.id}
                 >
-                  {activeRegistrationId === event.id ? 'Joining...' : 'Join event'}
+                  {activeRegistrationId === event.id
+                    ? copy.common.joining
+                    : copy.common.joinEvent}
                 </button>
               )}
             </div>
@@ -279,18 +282,16 @@ export function DiscoverPage() {
             disabled={meta.page <= 1}
             onClick={() => updateQuery({ page: String(meta.page - 1) })}
           >
-            Previous
+            {copy.common.previous}
           </button>
-          <span className="pill">
-            Page {meta.page} of {meta.totalPages}
-          </span>
+          <span className="pill">{copy.common.pageOf(meta.page, meta.totalPages)}</span>
           <button
             type="button"
             className="secondary-button"
             disabled={meta.page >= meta.totalPages}
             onClick={() => updateQuery({ page: String(meta.page + 1) })}
           >
-            Next
+            {copy.common.next}
           </button>
         </div>
       ) : null}

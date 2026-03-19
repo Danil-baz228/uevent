@@ -2,12 +2,14 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, MoreThan, Repository } from 'typeorm';
 
 import { CommentsService } from '../comments/comments.service';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
+import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventRegistrationEntity } from '../registrations/entities/event-registration.entity';
 import { RegistrationsService } from '../registrations/registrations.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -19,19 +21,49 @@ import { UserEntity } from '../users/entities/user.entity';
 @Injectable()
 export class EventsService {
   constructor(
+    private readonly inMemoryData: InMemoryDataService,
+    @Optional()
     @InjectRepository(EventEntity)
-    private readonly eventsRepository: Repository<EventEntity>,
+    private readonly eventsRepository: Repository<EventEntity> | undefined,
+    @Optional()
     @InjectRepository(UserEntity)
-    private readonly usersRepository: Repository<UserEntity>,
+    private readonly usersRepository: Repository<UserEntity> | undefined,
+    @Optional()
     @InjectRepository(EventCommentEntity)
-    private readonly commentsRepository: Repository<EventCommentEntity>,
+    private readonly commentsRepository: Repository<EventCommentEntity> | undefined,
+    @Optional()
     @InjectRepository(EventRegistrationEntity)
-    private readonly registrationsRepository: Repository<EventRegistrationEntity>,
+    private readonly registrationsRepository:
+      | Repository<EventRegistrationEntity>
+      | undefined,
     private readonly registrationsService: RegistrationsService,
     private readonly commentsService: CommentsService,
   ) {}
 
   async findAll(query: FindEventsDto) {
+    if (!this.eventsRepository) {
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 6;
+      const filteredEvents = this.inMemoryData
+        .listEvents()
+        .filter((event) => this.matchesEventQuery(event, query))
+        .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
+      const total = filteredEvents.length;
+      const items = filteredEvents
+        .slice((page - 1) * limit, page * limit)
+        .map((event) => this.serializeEvent(event));
+
+      return {
+        items,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+      };
+    }
+
     const page = query.page ?? 1;
     const limit = query.limit ?? 6;
     const where = this.buildFindWhere(query);
@@ -56,6 +88,53 @@ export class EventsService {
   }
 
   async findOne(id: string) {
+    if (!this.eventsRepository || !this.commentsRepository) {
+      const event = this.inMemoryData.findEventById(id);
+
+      if (!event) {
+        throw new NotFoundException(`Event ${id} was not found`);
+      }
+
+      const allEvents = this.inMemoryData.listEvents();
+      const [attendees, comments] = await Promise.all([
+        this.registrationsService.findConfirmedAttendees(event.id),
+        Promise.resolve(
+          this.inMemoryData
+            .listCommentsByEvent(event.id)
+            .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+            .slice(0, 20),
+        ),
+      ]);
+      const organizerEvents = event.organizerId
+        ? allEvents
+            .filter((candidate) => candidate.organizerId === event.organizerId)
+            .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime())
+        : [];
+      const similarEvents = allEvents
+        .filter((candidate) => candidate.category === event.category)
+        .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
+
+      return {
+        ...this.serializeEvent(event),
+        attendees: event.hideAttendeeNames
+          ? attendees.map((attendee, index) => ({
+              ...attendee,
+              displayName: `Guest ${index + 1}`,
+              email: '',
+            }))
+          : attendees,
+        comments: comments.map((comment) => this.commentsService.serializeComment(comment)),
+        organizerEvents: organizerEvents
+          .filter((candidate) => candidate.id !== event.id)
+          .slice(0, 3)
+          .map((candidate) => this.serializeEvent(candidate)),
+        similarEvents: similarEvents
+          .filter((candidate) => candidate.id !== event.id)
+          .slice(0, 3)
+          .map((candidate) => this.serializeEvent(candidate)),
+      };
+    }
+
     const event = await this.eventsRepository.findOne({
       where: { id },
       relations: { organizer: true },
@@ -111,6 +190,30 @@ export class EventsService {
   }
 
   async create(dto: CreateEventDto, organizerId: string) {
+    if (!this.eventsRepository || !this.usersRepository) {
+      const organizer = this.inMemoryData.findUserById(organizerId);
+
+      if (!organizer) {
+        throw new NotFoundException('Organizer was not found');
+      }
+
+      const savedEvent = this.inMemoryData.createEvent({
+        title: dto.title,
+        description: dto.description,
+        category: dto.category,
+        city: dto.city,
+        posterUrl: dto.posterUrl?.trim() || null,
+        startsAt: new Date(dto.startsAt),
+        price: dto.price ?? 0,
+        capacity: dto.capacity ?? 50,
+        hideAttendeeNames: false,
+        commentsClosed: false,
+        organizerId: organizer.id,
+      });
+
+      return this.serializeEvent(savedEvent);
+    }
+
     const organizer = await this.usersRepository.findOne({
       where: { id: organizerId },
     });
@@ -147,6 +250,39 @@ export class EventsService {
   }
 
   async update(id: string, dto: UpdateEventDto, organizerId: string) {
+    if (!this.eventsRepository) {
+      const event = this.inMemoryData.findEventById(id);
+
+      if (!event) {
+        throw new NotFoundException(`Event ${id} was not found`);
+      }
+
+      this.ensureOrganizerAccess(event, organizerId);
+
+      const savedEvent = this.inMemoryData.updateEvent(id, {
+        ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+        ...(dto.description !== undefined ? { description: dto.description.trim() } : {}),
+        ...(dto.category !== undefined ? { category: dto.category.trim() } : {}),
+        ...(dto.city !== undefined ? { city: dto.city.trim() } : {}),
+        ...(dto.posterUrl !== undefined ? { posterUrl: dto.posterUrl?.trim() || null } : {}),
+        ...(dto.startsAt !== undefined ? { startsAt: new Date(dto.startsAt) } : {}),
+        ...(dto.price !== undefined ? { price: dto.price } : {}),
+        ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
+        ...(dto.hideAttendeeNames !== undefined
+          ? { hideAttendeeNames: dto.hideAttendeeNames }
+          : {}),
+        ...(dto.commentsClosed !== undefined
+          ? { commentsClosed: dto.commentsClosed }
+          : {}),
+      });
+
+      if (!savedEvent) {
+        throw new NotFoundException(`Event ${id} was not found`);
+      }
+
+      return this.serializeEvent(savedEvent);
+    }
+
     const event = await this.eventsRepository.findOne({
       where: { id },
       relations: { organizer: true },
@@ -203,6 +339,19 @@ export class EventsService {
   }
 
   async remove(id: string, organizerId: string) {
+    if (!this.eventsRepository || !this.commentsRepository || !this.registrationsRepository) {
+      const event = this.inMemoryData.findEventById(id);
+
+      if (!event) {
+        throw new NotFoundException(`Event ${id} was not found`);
+      }
+
+      this.ensureOrganizerAccess(event, organizerId);
+      this.inMemoryData.removeEvent(id);
+
+      return { message: 'Event deleted' };
+    }
+
     const event = await this.eventsRepository.findOne({
       where: { id },
     });
@@ -242,6 +391,32 @@ export class EventsService {
       { ...baseWhere, description: ILike(`%${search}%`) },
       { ...baseWhere, city: ILike(`%${search}%`) },
     ];
+  }
+
+  private matchesEventQuery(event: EventEntity, query: FindEventsDto) {
+    const search = query.q?.trim().toLowerCase();
+    const category = query.category?.trim();
+    const priceType = query.priceType ?? 'all';
+
+    if (category && event.category !== category) {
+      return false;
+    }
+
+    if (priceType === 'free' && Number(event.price) > 0) {
+      return false;
+    }
+
+    if (priceType === 'paid' && Number(event.price) <= 0) {
+      return false;
+    }
+
+    if (!search) {
+      return true;
+    }
+
+    return [event.title, event.description, event.city].some((value) =>
+      value.toLowerCase().includes(search),
+    );
   }
 
   private serializeEvent(event: EventEntity) {

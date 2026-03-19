@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { isDatabaseEnabled } from '../../config/database-mode';
 import { CommentsModule } from '../comments/comments.module';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
 import { RegistrationsModule } from '../registrations/registrations.module';
@@ -10,14 +11,20 @@ import { EventEntity } from './entities/event.entity';
 import { EventsService } from './events.service';
 import { UserEntity } from '../users/entities/user.entity';
 
+const databaseImports = isDatabaseEnabled
+  ? [
+      TypeOrmModule.forFeature([
+        EventEntity,
+        UserEntity,
+        EventCommentEntity,
+        EventRegistrationEntity,
+      ]),
+    ]
+  : [];
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      EventEntity,
-      UserEntity,
-      EventCommentEntity,
-      EventRegistrationEntity,
-    ]),
+    ...databaseImports,
     RegistrationsModule,
     CommentsModule,
   ],
