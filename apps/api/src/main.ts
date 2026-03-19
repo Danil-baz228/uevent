@@ -1,8 +1,11 @@
 import 'reflect-metadata';
 import { config as loadEnv } from 'dotenv';
+import { mkdirSync } from 'fs';
+import { join } from 'path';
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
@@ -10,7 +13,13 @@ import { AppModule } from './app.module';
 loadEnv();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const uploadsPath = join(process.cwd(), 'apps', 'api', 'uploads');
+
+  mkdirSync(uploadsPath, { recursive: true });
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads',
+  });
 
   app.setGlobalPrefix('api');
   app.enableCors({

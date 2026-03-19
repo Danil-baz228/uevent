@@ -5,7 +5,7 @@ import { useEvents } from '../hooks/useEvents';
 import { fetchHealth, formatEventDate, formatPrice } from '../lib/api';
 
 export function HomePage() {
-  const { events, status, error } = useEvents();
+  const { events, status, error } = useEvents({ page: 1, limit: 6, priceType: 'all' });
   const [apiStatus, setApiStatus] = useState('Checking API...');
 
   useEffect(() => {

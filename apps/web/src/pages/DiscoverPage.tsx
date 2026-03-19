@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { useEvents } from '../hooks/useEvents';
@@ -10,12 +10,23 @@ import {
   fetchMyRegistrations,
   formatEventDate,
   formatPrice,
+  getEventPosterUrl,
 } from '../lib/api';
 
 export function DiscoverPage() {
-  const { events, status, error } = useEvents();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { token, isReady } = useAuth();
-  const navigate = useNavigate();
+  const query = searchParams.get('q') ?? '';
+  const category = searchParams.get('category') ?? 'all';
+  const priceType = searchParams.get('priceType') ?? 'all';
+  const page = Number(searchParams.get('page') ?? '1');
+  const { events, meta, status, error } = useEvents({
+    q: query,
+    category,
+    priceType: priceType as 'free' | 'paid' | 'all',
+    page,
+    limit: 6,
+  });
   const [activePaymentId, setActivePaymentId] = useState<string | null>(null);
   const [activeRegistrationId, setActiveRegistrationId] = useState<string | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
@@ -58,7 +69,7 @@ export function DiscoverPage() {
     }
 
     setPaymentMessage('Please sign in before joining or buying a ticket.');
-    navigate('/auth');
+    window.location.assign('/auth');
     return false;
   }
 
@@ -122,6 +133,24 @@ export function DiscoverPage() {
     return registrations.find((registration) => registration.eventId === eventId);
   }
 
+  function updateQuery(next: Record<string, string>) {
+    const nextParams = new URLSearchParams(searchParams);
+
+    Object.entries(next).forEach(([key, value]) => {
+      if (!value || value === 'all') {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, value);
+      }
+    });
+
+    if (!('page' in next)) {
+      nextParams.set('page', '1');
+    }
+
+    setSearchParams(nextParams);
+  }
+
   return (
     <section className="section">
       <div className="section-header">
@@ -133,15 +162,50 @@ export function DiscoverPage() {
         </p>
       </div>
 
-      <div className="pill-row">
-        <span className="pill">Networking</span>
-        <span className="pill">Workshop</span>
-        <span className="pill">Meetup</span>
-        <span className="pill">Free</span>
-        <span className="pill">Paid</span>
+      <div className="discover-toolbar">
+        <label className="field search-field">
+          <span>Search</span>
+          <input
+            value={query}
+            placeholder="Title, city, or description"
+            onChange={(event) => updateQuery({ q: event.target.value })}
+          />
+        </label>
+
+        <div className="filter-grid">
+          <label className="field compact-field">
+            <span>Category</span>
+            <select
+              value={category}
+              onChange={(event) => updateQuery({ category: event.target.value })}
+            >
+              <option value="all">All</option>
+              <option value="Networking">Networking</option>
+              <option value="Workshop">Workshop</option>
+              <option value="Meetup">Meetup</option>
+            </select>
+          </label>
+
+          <label className="field compact-field">
+            <span>Price</span>
+            <select
+              value={priceType}
+              onChange={(event) => updateQuery({ priceType: event.target.value })}
+            >
+              <option value="all">All</option>
+              <option value="free">Free</option>
+              <option value="paid">Paid</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       {paymentMessage ? <p className="notice error">{paymentMessage}</p> : null}
+      {meta ? (
+        <p className="muted results-summary">
+          Showing {events.length} of {meta.total} events
+        </p>
+      ) : null}
 
       <div className="list-grid">
         {status === 'loading' ? <p className="notice">Loading events...</p> : null}
@@ -151,15 +215,29 @@ export function DiscoverPage() {
         ) : null}
         {events.map((event) => (
           <article key={event.id} className="list-card">
-            <div>
-              <span className="pill">{event.category}</span>
-              <h3>{event.title}</h3>
-              <p>
-                {event.city} / {formatEventDate(event.startsAt)}
-              </p>
-              <p className="muted">
-                Organizer: {event.organizer?.displayName ?? 'Community Host'}
-              </p>
+            <div className="list-card-main">
+              <img
+                src={getEventPosterUrl(event)}
+                alt={`${event.title} poster`}
+                className="event-poster-thumb"
+              />
+              <div>
+                <span className="pill">{event.category}</span>
+                <h3>
+                  <Link to={`/events/${event.id}`} className="event-link">
+                    {event.title}
+                  </Link>
+                </h3>
+                <p>
+                  {event.city} / {formatEventDate(event.startsAt)}
+                </p>
+                <p className="muted">
+                  Organizer: {event.organizer?.displayName ?? 'Community Host'}
+                </p>
+                <Link to={`/events/${event.id}`} className="muted event-detail-link">
+                  Open event details
+                </Link>
+              </div>
             </div>
 
             <div className="list-card-meta">
@@ -192,6 +270,30 @@ export function DiscoverPage() {
           </article>
         ))}
       </div>
+
+      {meta && meta.totalPages > 1 ? (
+        <div className="pagination-row">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={meta.page <= 1}
+            onClick={() => updateQuery({ page: String(meta.page - 1) })}
+          >
+            Previous
+          </button>
+          <span className="pill">
+            Page {meta.page} of {meta.totalPages}
+          </span>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={meta.page >= meta.totalPages}
+            onClick={() => updateQuery({ page: String(meta.page + 1) })}
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

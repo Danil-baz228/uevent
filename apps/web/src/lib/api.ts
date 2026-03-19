@@ -1,5 +1,6 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
 export type ApiHealth = {
   service: string;
@@ -28,9 +29,12 @@ export type ApiEvent = {
   description: string;
   category: string;
   city: string;
+  posterUrl: string | null;
   startsAt: string;
   price: number;
   capacity: number;
+  hideAttendeeNames: boolean;
+  commentsClosed: boolean;
   organizer: {
     id: string;
     displayName: string;
@@ -39,14 +43,66 @@ export type ApiEvent = {
   createdAt: string;
 };
 
+export type EventAttendee = {
+  id: string;
+  displayName: string;
+  email: string;
+  quantity: number;
+  joinedAt: string;
+};
+
+export type EventComment = {
+  id: string;
+  eventId: string;
+  parentCommentId: string | null;
+  content: string;
+  createdAt: string;
+  author: {
+    id: string;
+    displayName: string;
+    email: string;
+  };
+};
+
+export type EventDetailsResponse = ApiEvent & {
+  attendees: EventAttendee[];
+  comments: EventComment[];
+  organizerEvents: ApiEvent[];
+  similarEvents: ApiEvent[];
+};
+
+export type EventListResponse = {
+  items: ApiEvent[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+export type EventQueryParams = {
+  q?: string;
+  category?: string;
+  priceType?: 'free' | 'paid' | 'all';
+  page?: number;
+  limit?: number;
+};
+
 export type CreateEventPayload = {
   title: string;
   description: string;
   category: string;
   city: string;
+  posterUrl?: string;
   startsAt: string;
   price?: number;
   capacity?: number;
+};
+
+export type UpdateEventPayload = Partial<CreateEventPayload> & {
+  hideAttendeeNames?: boolean;
+  commentsClosed?: boolean;
 };
 
 export type LoginPayload = {
@@ -99,14 +155,21 @@ export type RefreshTokenPayload = {
   refreshToken: string;
 };
 
+export type CreateCommentPayload = {
+  content: string;
+  parentCommentId?: string;
+};
+
 type RequestOptions = RequestInit & {
   token?: string | null;
 };
 
 async function requestJson<T>(path: string, init?: RequestOptions): Promise<T> {
   const headers = new Headers(init?.headers ?? {});
+  const isFormData =
+    typeof FormData !== 'undefined' && init?.body instanceof FormData;
 
-  if (!headers.has('Content-Type') && init?.body) {
+  if (!headers.has('Content-Type') && init?.body && !isFormData) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -146,14 +209,97 @@ export function fetchHealth() {
 }
 
 export function fetchEvents() {
-  return requestJson<ApiEvent[]>('/events');
+  return requestJson<EventListResponse>('/events');
 }
 
-export function createEvent(payload: CreateEventPayload, token: string) {
-  return requestJson<ApiEvent>('/events', {
+export function fetchEventsWithQuery(params: EventQueryParams) {
+  const searchParams = new URLSearchParams();
+
+  if (params.q) {
+    searchParams.set('q', params.q);
+  }
+
+  if (params.category && params.category !== 'all') {
+    searchParams.set('category', params.category);
+  }
+
+  if (params.priceType && params.priceType !== 'all') {
+    searchParams.set('priceType', params.priceType);
+  }
+
+  if (params.page) {
+    searchParams.set('page', String(params.page));
+  }
+
+  if (params.limit) {
+    searchParams.set('limit', String(params.limit));
+  }
+
+  const query = searchParams.toString();
+
+  return requestJson<EventListResponse>(`/events${query ? `?${query}` : ''}`);
+}
+
+export function fetchEventById(eventId: string) {
+  return requestJson<EventDetailsResponse>(`/events/${eventId}`);
+}
+
+export function createEventComment(
+  eventId: string,
+  payload: CreateCommentPayload,
+  token: string,
+) {
+  return requestJson<EventComment>(`/events/${eventId}/comments`, {
     method: 'POST',
     token,
     body: JSON.stringify(payload),
+  });
+}
+
+export function updateEventComment(
+  eventId: string,
+  commentId: string,
+  payload: CreateCommentPayload,
+  token: string,
+) {
+  return requestJson<EventComment>(`/events/${eventId}/comments/${commentId}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteEventComment(eventId: string, commentId: string, token: string) {
+  return requestJson<{ message: string }>(`/events/${eventId}/comments/${commentId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function createEvent(payload: CreateEventPayload | FormData, token: string) {
+  return requestJson<ApiEvent>('/events', {
+    method: 'POST',
+    token,
+    body: payload instanceof FormData ? payload : JSON.stringify(payload),
+  });
+}
+
+export function updateEvent(
+  eventId: string,
+  payload: UpdateEventPayload | FormData,
+  token: string,
+) {
+  return requestJson<ApiEvent>(`/events/${eventId}`, {
+    method: 'PATCH',
+    token,
+    body: payload instanceof FormData ? payload : JSON.stringify(payload),
+  });
+}
+
+export function deleteEvent(eventId: string, token: string) {
+  return requestJson<{ message: string }>(`/events/${eventId}`, {
+    method: 'DELETE',
+    token,
   });
 }
 
@@ -238,4 +384,41 @@ export function formatPrice(price: number) {
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(price);
+}
+
+export function getEventPosterUrl(event: Pick<ApiEvent, 'posterUrl' | 'title' | 'category'>) {
+  if (event.posterUrl) {
+    if (event.posterUrl.startsWith('http') || event.posterUrl.startsWith('data:')) {
+      return event.posterUrl;
+    }
+
+    return `${API_ORIGIN}${event.posterUrl}`;
+  }
+
+  const title = event.title
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const category = event.category
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ffecd6"/>
+          <stop offset="55%" stop-color="#f7fbff"/>
+          <stop offset="100%" stop-color="#daf4ee"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="675" fill="url(#bg)"/>
+      <circle cx="1030" cy="120" r="120" fill="#ffd29b" opacity="0.55"/>
+      <circle cx="180" cy="560" r="170" fill="#8fd0c5" opacity="0.2"/>
+      <text x="70" y="110" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#c4572d">${category}</text>
+      <text x="70" y="250" font-family="Segoe UI, sans-serif" font-size="64" font-weight="700" fill="#172033">${title}</text>
+      <text x="70" y="600" font-family="Segoe UI, sans-serif" font-size="28" fill="#445066">Uevent poster</text>
+    </svg>`,
+  )}`;
 }

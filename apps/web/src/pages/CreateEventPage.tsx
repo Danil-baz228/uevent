@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
@@ -17,10 +17,20 @@ const initialForm = {
 export function CreateEventPage() {
   const { user, token, isReady } = useAuth();
   const [form, setForm] = useState(initialForm);
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>(
     'idle',
   );
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    return () => {
+      if (posterPreview) {
+        URL.revokeObjectURL(posterPreview);
+      }
+    };
+  }, [posterPreview]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,19 +42,26 @@ export function CreateEventPage() {
         throw new Error('Please sign in before creating an event');
       }
 
-      await createEvent({
-        title: form.title,
-        description: form.description,
-        category: form.category,
-        city: form.city,
-        startsAt: new Date(form.startsAt).toISOString(),
-        price: Number(form.price),
-        capacity: Number(form.capacity),
-      }, token);
+      const payload = new FormData();
+      payload.append('title', form.title);
+      payload.append('description', form.description);
+      payload.append('category', form.category);
+      payload.append('city', form.city);
+      payload.append('startsAt', new Date(form.startsAt).toISOString());
+      payload.append('price', String(Number(form.price)));
+      payload.append('capacity', String(Number(form.capacity)));
+
+      if (posterFile) {
+        payload.append('poster', posterFile);
+      }
+
+      await createEvent(payload, token);
 
       setStatus('success');
       setMessage('Event saved to PostgreSQL successfully.');
       setForm(initialForm);
+      setPosterFile(null);
+      setPosterPreview('');
     } catch (submitError) {
       setStatus('error');
       setMessage(
@@ -69,6 +86,7 @@ export function CreateEventPage() {
           <li>TypeORM persists every created event</li>
           <li>The logged-in user becomes the organizer</li>
           <li>New events appear on the Discover page after reload</li>
+          <li>You can upload a poster from your computer or use the default cover</li>
         </ul>
 
         <p className="muted">Demo account: demo@uevent.local / demo12345</p>
@@ -149,6 +167,31 @@ export function CreateEventPage() {
             />
           </label>
         </div>
+
+        <label className="field">
+          <span>Poster image</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(event) => {
+              const nextFile = event.target.files?.[0] ?? null;
+              if (posterPreview) {
+                URL.revokeObjectURL(posterPreview);
+              }
+
+              setPosterFile(nextFile);
+              setPosterPreview(nextFile ? URL.createObjectURL(nextFile) : '');
+            }}
+          />
+        </label>
+
+        {posterPreview ? (
+          <img
+            src={posterPreview}
+            alt="Poster preview"
+            className="event-poster-large"
+          />
+        ) : null}
 
         <div className="form-grid">
           <label className="field">

@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { EventCommentEntity } from '../../comments/entities/event-comment.entity';
 import { EventRegistrationEntity } from '../../registrations/entities/event-registration.entity';
 import { UserEntity } from '../../users/entities/user.entity';
 
@@ -28,6 +29,9 @@ export class EventEntity {
   @Column()
   city!: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  posterUrl!: string | null;
+
   @Column({ type: 'timestamptz' })
   startsAt!: Date;
 
@@ -36,6 +40,12 @@ export class EventEntity {
 
   @Column({ default: 50 })
   capacity!: number;
+
+  @Column({ default: false })
+  hideAttendeeNames!: boolean;
+
+  @Column({ default: false })
+  commentsClosed!: boolean;
 
   @Column({ nullable: true })
   organizerId!: string | null;
@@ -49,4 +59,7 @@ export class EventEntity {
 
   @OneToMany(() => EventRegistrationEntity, (registration) => registration.event)
   registrations!: EventRegistrationEntity[];
+
+  @OneToMany(() => EventCommentEntity, (comment) => comment.event)
+  comments!: EventCommentEntity[];
 }

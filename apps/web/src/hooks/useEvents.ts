@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 
-import { ApiEvent, fetchEvents } from '../lib/api';
+import { ApiEvent, EventListResponse, EventQueryParams, fetchEventsWithQuery } from '../lib/api';
 
 type LoadStatus = 'loading' | 'success' | 'error';
 
-export function useEvents() {
+export function useEvents(query: EventQueryParams) {
   const [events, setEvents] = useState<ApiEvent[]>([]);
+  const [meta, setMeta] = useState<EventListResponse['meta'] | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [error, setError] = useState<string | null>(null);
 
@@ -17,13 +18,14 @@ export function useEvents() {
       setError(null);
 
       try {
-        const payload = await fetchEvents();
+        const payload = await fetchEventsWithQuery(query);
 
         if (!active) {
           return;
         }
 
-        setEvents(payload);
+        setEvents(payload.items);
+        setMeta(payload.meta);
         setStatus('success');
       } catch (loadError) {
         if (!active) {
@@ -44,7 +46,7 @@ export function useEvents() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [query.category, query.limit, query.page, query.priceType, query.q]);
 
-  return { events, status, error };
+  return { events, meta, status, error };
 }

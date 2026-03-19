@@ -70,6 +70,22 @@ export class RegistrationsService {
     );
   }
 
+  async findConfirmedAttendees(eventId: string) {
+    const registrations = await this.registrationsRepository.find({
+      where: { eventId, status: 'confirmed' },
+      relations: { user: true },
+      order: { createdAt: 'ASC' },
+    });
+
+    return registrations.map((registration) => ({
+      id: registration.user.id,
+      displayName: registration.user.displayName,
+      email: registration.user.email,
+      quantity: registration.quantity,
+      joinedAt: registration.createdAt,
+    }));
+  }
+
   async findOneBySessionId(sessionId: string, userId: string) {
     const registration = await this.registrationsRepository.findOne({
       where: { stripeCheckoutSessionId: sessionId, userId },
@@ -205,9 +221,12 @@ export class RegistrationsService {
         description: event.description,
         category: event.category,
         city: event.city,
+        posterUrl: event.posterUrl,
         startsAt: event.startsAt,
         price: Number(event.price),
         capacity: event.capacity,
+        hideAttendeeNames: event.hideAttendeeNames,
+        commentsClosed: event.commentsClosed,
         createdAt: event.createdAt,
         organizer: event.organizer
           ? {

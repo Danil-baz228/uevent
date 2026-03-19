@@ -4,6 +4,7 @@ import { useAuth } from './auth/AuthContext';
 import { AuthPage } from './pages/AuthPage';
 import { CreateEventPage } from './pages/CreateEventPage';
 import { DiscoverPage } from './pages/DiscoverPage';
+import { EventDetailsPage } from './pages/EventDetailsPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PaymentCancelPage } from './pages/PaymentCancelPage';
@@ -75,6 +76,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/discover" element={<DiscoverPage />} />
+        <Route path="/events/:eventId" element={<EventDetailsPage />} />
         <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/payment/success" element={<PaymentSuccessPage />} />
