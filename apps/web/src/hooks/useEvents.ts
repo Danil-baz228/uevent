@@ -46,7 +46,7 @@ export function useEvents(query: EventQueryParams) {
     return () => {
       active = false;
     };
-  }, [query.category, query.limit, query.page, query.priceType, query.q]);
+  }, [query.category, query.format, query.limit, query.page, query.priceType, query.q, query.sortBy, query.theme]);
 
   return { events, meta, status, error };
 }

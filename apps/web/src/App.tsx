@@ -88,6 +88,8 @@ function Layout() {
           return notification.body.match(/ registered for (.+)\.$/)?.[1] ?? notification.body;
         case 'new_comment':
           return notification.body.match(/ commented on (.+)\.$/)?.[1] ?? notification.body;
+        case 'event_reminder':
+          return notification.body.match(/^(.+) starts on /)?.[1] ?? notification.body;
         default:
           return notification.body;
       }
@@ -133,12 +135,24 @@ function Layout() {
             title: 'Новий коментар',
             body: `${actorName ?? 'Користувач'} залишив коментар до події ${eventTitle}.`,
           };
+        case 'event_reminder':
+          return {
+            title: 'Нагадування про подію',
+            body: `Незабаром починається подія ${eventTitle}. Перевірте час і не пропустіть її.`,
+          };
         default:
           return {
             title: notification.title,
             body: notification.body,
           };
       }
+    }
+
+    if (notification.type === 'event_reminder') {
+      return {
+        title: 'Event reminder',
+        body: `${eventTitle} is coming up soon. Check the time and don't miss it.`,
+      };
     }
 
     return {

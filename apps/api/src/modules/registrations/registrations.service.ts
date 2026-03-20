@@ -17,6 +17,7 @@ import {
   RegistrationStatus,
 } from './entities/event-registration.entity';
 import { CreateRegistrationDto } from './dto/create-registration.dto';
+import { UpdateRegistrationReminderDto } from './dto/update-registration-reminder.dto';
 
 @Injectable()
 export class RegistrationsService {
@@ -42,6 +43,8 @@ export class RegistrationsService {
         throw new NotFoundException(`Event ${dto.eventId} was not found`);
       }
 
+      this.ensureEventIsPublished(event);
+
       if (Number(event.price) > 0) {
         throw new BadRequestException(
           'Paid events require Stripe checkout before registration is confirmed',
@@ -60,6 +63,8 @@ export class RegistrationsService {
         amountTotal: 0,
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'free',
+        reminderAt: null,
+        reminderSentAt: null,
       });
 
       const attendee = await this.usersService.getCurrentUser(userId);
@@ -83,6 +88,8 @@ export class RegistrationsService {
       throw new NotFoundException(`Event ${dto.eventId} was not found`);
     }
 
+    this.ensureEventIsPublished(event);
+
     if (Number(event.price) > 0) {
       throw new BadRequestException(
         'Paid events require Stripe checkout before registration is confirmed',
@@ -102,6 +109,8 @@ export class RegistrationsService {
         amountTotal: 0,
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'free',
+        reminderAt: null,
+        reminderSentAt: null,
       }),
     );
 
@@ -134,6 +143,50 @@ export class RegistrationsService {
     return registrations.map((registration) =>
       this.serializeRegistration(registration, registration.event),
     );
+  }
+
+  async updateReminder(
+    eventId: string,
+    dto: UpdateRegistrationReminderDto,
+    userId: string,
+  ) {
+    if (!this.registrationsRepository) {
+      const registration = this.inMemoryData.findRegistrationByEventAndUser(eventId, userId);
+
+      if (!registration || registration.status !== 'confirmed') {
+        throw new NotFoundException('Confirmed registration was not found');
+      }
+
+      const reminderAt = dto.reminderAt ? new Date(dto.reminderAt) : null;
+      this.ensureReminderIsValid(reminderAt, registration.event.startsAt);
+      const savedRegistration = this.inMemoryData.updateRegistration(registration.id, {
+        reminderAt,
+        reminderSentAt: null,
+      });
+
+      if (!savedRegistration) {
+        throw new NotFoundException('Confirmed registration was not found');
+      }
+
+      return this.serializeRegistration(savedRegistration, savedRegistration.event);
+    }
+
+    const registration = await this.registrationsRepository.findOne({
+      where: { eventId, userId, status: 'confirmed' },
+      relations: { event: { organizer: true } },
+    });
+
+    if (!registration) {
+      throw new NotFoundException('Confirmed registration was not found');
+    }
+
+    const reminderAt = dto.reminderAt ? new Date(dto.reminderAt) : null;
+    this.ensureReminderIsValid(reminderAt, registration.event.startsAt);
+    registration.reminderAt = reminderAt;
+    registration.reminderSentAt = null;
+    const savedRegistration = await this.registrationsRepository.save(registration);
+
+    return this.serializeRegistration(savedRegistration, registration.event);
   }
 
   async findConfirmedAttendees(eventId: string) {
@@ -202,6 +255,8 @@ export class RegistrationsService {
         throw new NotFoundException(`Event ${eventId} was not found`);
       }
 
+      this.ensureEventIsPublished(event);
+
       const eventPrice = Number(event.price);
 
       if (eventPrice <= 0) {
@@ -222,6 +277,8 @@ export class RegistrationsService {
         amountTotal: eventPrice * quantity,
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'unpaid',
+        reminderAt: null,
+        reminderSentAt: null,
       });
 
       return {
@@ -238,6 +295,8 @@ export class RegistrationsService {
     if (!event) {
       throw new NotFoundException(`Event ${eventId} was not found`);
     }
+
+    this.ensureEventIsPublished(event);
 
     const eventPrice = Number(event.price);
 
@@ -260,6 +319,8 @@ export class RegistrationsService {
         amountTotal: eventPrice * quantity,
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'unpaid',
+        reminderAt: null,
+        reminderSentAt: null,
       }),
     );
 
@@ -396,6 +457,8 @@ export class RegistrationsService {
       amountTotal: Number(registration.amountTotal),
       stripeCheckoutSessionId: registration.stripeCheckoutSessionId,
       stripePaymentStatus: registration.stripePaymentStatus,
+      reminderAt: registration.reminderAt,
+      reminderSentAt: registration.reminderSentAt,
       createdAt: registration.createdAt,
       updatedAt: registration.updatedAt,
       event: {
@@ -403,13 +466,20 @@ export class RegistrationsService {
         title: event.title,
         description: event.description,
         category: event.category,
+        format: event.format,
+        theme: event.theme,
         city: event.city,
         posterUrl: event.posterUrl,
         startsAt: event.startsAt,
+        publishAt: event.publishAt,
         price: Number(event.price),
         capacity: event.capacity,
         hideAttendeeNames: event.hideAttendeeNames,
+        attendeeVisibility: event.attendeeVisibility,
+        notifyOnNewAttendee: event.notifyOnNewAttendee,
+        commentAccess: event.commentAccess,
         commentsClosed: event.commentsClosed,
+        isPublished: !event.publishAt || event.publishAt.getTime() <= Date.now(),
         createdAt: event.createdAt,
         organizer: event.organizer
           ? {
@@ -420,5 +490,23 @@ export class RegistrationsService {
           : null,
       },
     };
+  }
+
+  private ensureReminderIsValid(reminderAt: Date | null, startsAt: Date) {
+    if (!reminderAt) {
+      return;
+    }
+
+    if (reminderAt.getTime() >= startsAt.getTime()) {
+      throw new BadRequestException('Reminder must be scheduled before the event starts');
+    }
+  }
+
+  private ensureEventIsPublished(event: EventEntity) {
+    if (!event.publishAt || event.publishAt.getTime() <= Date.now()) {
+      return;
+    }
+
+    throw new NotFoundException(`Event ${event.id} was not found`);
   }
 }

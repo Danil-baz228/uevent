@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -26,6 +27,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { FindEventsDto } from './dto/find-events.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventsService } from './events.service';
+import { verifyAccessToken } from '../auth/auth.utils';
 
 const uploadDirectory = join(process.cwd(), 'apps', 'api', 'uploads');
 mkdirSync(uploadDirectory, { recursive: true });
@@ -52,9 +54,29 @@ export class EventsController {
     return this.eventsService.findAll(query);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/scheduled')
+  findScheduled(@CurrentUser() user: { sub: string }) {
+    return this.eventsService.findScheduledByOrganizer(user.sub);
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.eventsService.findOne(id);
+  findOne(@Param('id') id: string, @Headers('authorization') authorization?: string) {
+    const token = authorization?.startsWith('Bearer ')
+      ? authorization.slice('Bearer '.length).trim()
+      : null;
+    const viewerId = token
+      ? (() => {
+          try {
+            return verifyAccessToken(token).sub;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+
+    return this.eventsService.findOne(id, viewerId);
   }
 
   @ApiBearerAuth()

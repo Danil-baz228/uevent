@@ -14,7 +14,8 @@ export type NotificationType =
   | 'registration_confirmed'
   | 'payment_confirmed'
   | 'new_attendee'
-  | 'new_comment';
+  | 'new_comment'
+  | 'event_reminder';
 
 @Entity({ name: 'notifications' })
 export class NotificationEntity {

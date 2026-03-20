@@ -3,6 +3,8 @@ import {
   Type,
 } from 'class-transformer';
 import {
+  IsIn,
+  IsBoolean,
   IsDateString,
   IsNumber,
   IsOptional,
@@ -22,6 +24,12 @@ export class CreateEventDto {
   category!: string;
 
   @IsString()
+  format!: string;
+
+  @IsString()
+  theme!: string;
+
+  @IsString()
   city!: string;
 
   @IsOptional()
@@ -31,6 +39,13 @@ export class CreateEventDto {
 
   @IsDateString()
   startsAt!: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' && !value.trim() ? null : value,
+  )
+  @IsDateString()
+  publishAt?: string | null;
 
   @IsOptional()
   @Type(() => Number)
@@ -43,4 +58,17 @@ export class CreateEventDto {
   @IsNumber()
   @Min(1)
   capacity?: number;
+
+  @IsOptional()
+  @IsIn(['everyone', 'registered_only', 'nobody'])
+  attendeeVisibility?: 'everyone' | 'registered_only' | 'nobody';
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  notifyOnNewAttendee?: boolean;
+
+  @IsOptional()
+  @IsIn(['everyone', 'registered_only', 'closed'])
+  commentAccess?: 'everyone' | 'registered_only' | 'closed';
 }

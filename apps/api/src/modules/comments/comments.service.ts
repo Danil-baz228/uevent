@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventEntity } from '../events/entities/event.entity';
+import { EventRegistrationEntity } from '../registrations/entities/event-registration.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UserEntity } from '../users/entities/user.entity';
 import { CreateEventCommentDto } from './dto/create-event-comment.dto';
@@ -28,6 +29,11 @@ export class CommentsService {
     @InjectRepository(EventEntity)
     private readonly eventsRepository: Repository<EventEntity> | undefined,
     @Optional()
+    @InjectRepository(EventRegistrationEntity)
+    private readonly registrationsRepository:
+      | Repository<EventRegistrationEntity>
+      | undefined,
+    @Optional()
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity> | undefined,
   ) {}
@@ -45,9 +51,7 @@ export class CommentsService {
         throw new NotFoundException('Author was not found');
       }
 
-      if (event.commentsClosed) {
-        throw new BadRequestException('Comments are closed for this event');
-      }
+      await this.ensureCommentAccess(event, authorId);
 
       if (dto.parentCommentId) {
         const parentComment = this.inMemoryData.findCommentById(dto.parentCommentId);
@@ -87,9 +91,7 @@ export class CommentsService {
       throw new NotFoundException('Author was not found');
     }
 
-    if (event.commentsClosed) {
-      throw new BadRequestException('Comments are closed for this event');
-    }
+    await this.ensureCommentAccess(event, authorId);
 
     if (dto.parentCommentId) {
       const parentComment = await this.commentsRepository.findOne({
@@ -224,5 +226,40 @@ export class CommentsService {
         email: comment.author.email,
       },
     };
+  }
+
+  private async ensureCommentAccess(event: EventEntity, authorId: string) {
+    if (event.commentAccess === 'closed' || event.commentsClosed) {
+      throw new BadRequestException('Comments are closed for this event');
+    }
+
+    if (event.organizerId === authorId || event.commentAccess === 'everyone') {
+      return;
+    }
+
+    if (!this.registrationsRepository) {
+      const registration = this.inMemoryData.findRegistrationByEventAndUser(
+        event.id,
+        authorId,
+      );
+
+      if (!registration || registration.status !== 'confirmed') {
+        throw new ForbiddenException(
+          'Only registered attendees can comment on this event',
+        );
+      }
+
+      return;
+    }
+
+    const registration = await this.registrationsRepository.findOne({
+      where: { eventId: event.id, userId: authorId, status: 'confirmed' },
+    });
+
+    if (!registration) {
+      throw new ForbiddenException(
+        'Only registered attendees can comment on this event',
+      );
+    }
   }
 }

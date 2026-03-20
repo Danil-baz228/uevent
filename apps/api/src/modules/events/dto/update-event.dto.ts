@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  IsIn,
   IsBoolean,
   IsDateString,
   IsNumber,
@@ -24,6 +25,14 @@ export class UpdateEventDto {
 
   @IsOptional()
   @IsString()
+  format?: string;
+
+  @IsOptional()
+  @IsString()
+  theme?: string;
+
+  @IsOptional()
+  @IsString()
   city?: string;
 
   @IsOptional()
@@ -34,6 +43,13 @@ export class UpdateEventDto {
   @IsOptional()
   @IsDateString()
   startsAt?: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' && !value.trim() ? null : value,
+  )
+  @IsDateString()
+  publishAt?: string | null;
 
   @IsOptional()
   @Type(() => Number)
@@ -51,6 +67,19 @@ export class UpdateEventDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   hideAttendeeNames?: boolean;
+
+  @IsOptional()
+  @IsIn(['everyone', 'registered_only', 'nobody'])
+  attendeeVisibility?: 'everyone' | 'registered_only' | 'nobody';
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  notifyOnNewAttendee?: boolean;
+
+  @IsOptional()
+  @IsIn(['everyone', 'registered_only', 'closed'])
+  commentAccess?: 'everyone' | 'registered_only' | 'closed';
 
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)

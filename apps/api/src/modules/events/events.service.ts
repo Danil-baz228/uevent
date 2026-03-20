@@ -5,7 +5,15 @@ import {
   Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, MoreThan, Repository } from 'typeorm';
+import {
+  FindOptionsOrder,
+  FindOptionsWhere,
+  ILike,
+  IsNull,
+  LessThanOrEqual,
+  MoreThan,
+  Repository,
+} from 'typeorm';
 
 import { CommentsService } from '../comments/comments.service';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
@@ -46,8 +54,9 @@ export class EventsService {
       const limit = query.limit ?? 6;
       const filteredEvents = this.inMemoryData
         .listEvents()
+        .filter((event) => this.isEventPublished(event))
         .filter((event) => this.matchesEventQuery(event, query))
-        .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
+        .sort((left, right) => this.compareEvents(left, right, query.sortBy));
       const total = filteredEvents.length;
       const items = filteredEvents
         .slice((page - 1) * limit, page * limit)
@@ -71,7 +80,7 @@ export class EventsService {
     const [events, total] = await this.eventsRepository.findAndCount({
       where,
       relations: { organizer: true },
-      order: { startsAt: 'ASC' },
+      order: this.buildFindOrder(query.sortBy),
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -87,13 +96,43 @@ export class EventsService {
     };
   }
 
-  async findOne(id: string) {
+  async findScheduledByOrganizer(organizerId: string) {
+    if (!this.eventsRepository) {
+      return this.inMemoryData
+        .listEvents()
+        .filter(
+          (event) =>
+            event.organizerId === organizerId &&
+            Boolean(event.publishAt && event.publishAt.getTime() > Date.now()),
+        )
+        .sort(
+          (left, right) =>
+            (left.publishAt?.getTime() ?? 0) - (right.publishAt?.getTime() ?? 0),
+        )
+        .map((event) => this.serializeEvent(event));
+    }
+
+    const events = await this.eventsRepository.find({
+      where: {
+        organizerId,
+        publishAt: MoreThan(new Date()),
+      },
+      relations: { organizer: true },
+      order: { publishAt: 'ASC', startsAt: 'ASC' },
+    });
+
+    return events.map((event) => this.serializeEvent(event));
+  }
+
+  async findOne(id: string, viewerId?: string | null) {
     if (!this.eventsRepository || !this.commentsRepository) {
       const event = this.inMemoryData.findEventById(id);
 
       if (!event) {
         throw new NotFoundException(`Event ${id} was not found`);
       }
+
+      this.ensureViewerCanOpenEvent(event, viewerId);
 
       const allEvents = this.inMemoryData.listEvents();
       const [attendees, comments] = await Promise.all([
@@ -107,22 +146,34 @@ export class EventsService {
       ]);
       const organizerEvents = event.organizerId
         ? allEvents
-            .filter((candidate) => candidate.organizerId === event.organizerId)
+            .filter(
+              (candidate) =>
+                candidate.organizerId === event.organizerId &&
+                this.canViewerSeeReferencedEvent(candidate, viewerId),
+            )
             .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime())
         : [];
       const similarEvents = allEvents
-        .filter((candidate) => candidate.category === event.category)
+        .filter(
+          (candidate) =>
+            candidate.category === event.category &&
+            this.canViewerSeeReferencedEvent(candidate, viewerId),
+        )
         .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
+      const canViewAttendees = await this.canViewerSeeAttendees(event, viewerId);
 
       return {
         ...this.serializeEvent(event),
-        attendees: event.hideAttendeeNames
-          ? attendees.map((attendee, index) => ({
-              ...attendee,
-              displayName: `Guest ${index + 1}`,
-              email: '',
-            }))
-          : attendees,
+        canViewAttendees,
+        attendees: canViewAttendees
+          ? event.hideAttendeeNames
+            ? attendees.map((attendee, index) => ({
+                ...attendee,
+                displayName: `Guest ${index + 1}`,
+                email: '',
+              }))
+            : attendees
+          : [],
         comments: comments.map((comment) => this.commentsService.serializeComment(comment)),
         organizerEvents: organizerEvents
           .filter((candidate) => candidate.id !== event.id)
@@ -144,21 +195,23 @@ export class EventsService {
       throw new NotFoundException(`Event ${id} was not found`);
     }
 
+    this.ensureViewerCanOpenEvent(event, viewerId);
+
     const [organizerEvents, similarEvents, attendees, comments] = await Promise.all([
       event.organizerId
         ? this.eventsRepository.find({
-            where: { organizerId: event.organizerId },
+            where: this.buildVisibleEventWhere({ organizerId: event.organizerId }, viewerId),
             relations: { organizer: true },
             order: { startsAt: 'ASC' },
             take: 4,
           })
         : Promise.resolve([]),
       this.eventsRepository.find({
-        where: { category: event.category },
+        where: this.buildVisibleEventWhere({ category: event.category }, viewerId),
         relations: { organizer: true },
-            order: { startsAt: 'ASC' },
-            take: 6,
-          }),
+        order: { startsAt: 'ASC' },
+        take: 6,
+      }),
       this.registrationsService.findConfirmedAttendees(event.id),
       this.commentsRepository.find({
         where: { eventId: event.id },
@@ -167,16 +220,20 @@ export class EventsService {
         take: 20,
       }),
     ]);
+    const canViewAttendees = await this.canViewerSeeAttendees(event, viewerId);
 
     return {
       ...this.serializeEvent(event),
-      attendees: event.hideAttendeeNames
-        ? attendees.map((attendee, index) => ({
-            ...attendee,
-            displayName: `Guest ${index + 1}`,
-            email: '',
-          }))
-        : attendees,
+      canViewAttendees,
+      attendees: canViewAttendees
+        ? event.hideAttendeeNames
+          ? attendees.map((attendee, index) => ({
+              ...attendee,
+              displayName: `Guest ${index + 1}`,
+              email: '',
+            }))
+          : attendees
+        : [],
       comments: comments.map((comment) => this.commentsService.serializeComment(comment)),
       organizerEvents: organizerEvents
         .filter((candidate) => candidate.id !== event.id)
@@ -201,13 +258,19 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         category: dto.category,
+        format: dto.format,
+        theme: dto.theme,
         city: dto.city,
         posterUrl: dto.posterUrl?.trim() || null,
         startsAt: new Date(dto.startsAt),
+        publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
         price: dto.price ?? 0,
         capacity: dto.capacity ?? 50,
         hideAttendeeNames: false,
-        commentsClosed: false,
+        attendeeVisibility: dto.attendeeVisibility ?? 'everyone',
+        notifyOnNewAttendee: dto.notifyOnNewAttendee ?? true,
+        commentAccess: dto.commentAccess ?? 'everyone',
+        commentsClosed: (dto.commentAccess ?? 'everyone') === 'closed',
         organizerId: organizer.id,
       });
 
@@ -226,13 +289,19 @@ export class EventsService {
       title: dto.title,
       description: dto.description,
       category: dto.category,
+      format: dto.format,
+      theme: dto.theme,
       city: dto.city,
       posterUrl: dto.posterUrl?.trim() || null,
       startsAt: new Date(dto.startsAt),
+      publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
       price: dto.price ?? 0,
       capacity: dto.capacity ?? 50,
       hideAttendeeNames: false,
-      commentsClosed: false,
+      attendeeVisibility: dto.attendeeVisibility ?? 'everyone',
+      notifyOnNewAttendee: dto.notifyOnNewAttendee ?? true,
+      commentAccess: dto.commentAccess ?? 'everyone',
+      commentsClosed: (dto.commentAccess ?? 'everyone') === 'closed',
       organizerId: organizer.id,
     });
 
@@ -263,16 +332,36 @@ export class EventsService {
         ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
         ...(dto.description !== undefined ? { description: dto.description.trim() } : {}),
         ...(dto.category !== undefined ? { category: dto.category.trim() } : {}),
+        ...(dto.format !== undefined ? { format: dto.format.trim() } : {}),
+        ...(dto.theme !== undefined ? { theme: dto.theme.trim() } : {}),
         ...(dto.city !== undefined ? { city: dto.city.trim() } : {}),
         ...(dto.posterUrl !== undefined ? { posterUrl: dto.posterUrl?.trim() || null } : {}),
         ...(dto.startsAt !== undefined ? { startsAt: new Date(dto.startsAt) } : {}),
+        ...(dto.publishAt !== undefined
+          ? { publishAt: dto.publishAt ? new Date(dto.publishAt) : null }
+          : {}),
         ...(dto.price !== undefined ? { price: dto.price } : {}),
         ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
         ...(dto.hideAttendeeNames !== undefined
           ? { hideAttendeeNames: dto.hideAttendeeNames }
           : {}),
+        ...(dto.attendeeVisibility !== undefined
+          ? { attendeeVisibility: dto.attendeeVisibility }
+          : {}),
+        ...(dto.notifyOnNewAttendee !== undefined
+          ? { notifyOnNewAttendee: dto.notifyOnNewAttendee }
+          : {}),
+        ...(dto.commentAccess !== undefined
+          ? {
+              commentAccess: dto.commentAccess,
+              commentsClosed: dto.commentAccess === 'closed',
+            }
+          : {}),
         ...(dto.commentsClosed !== undefined
-          ? { commentsClosed: dto.commentsClosed }
+          ? {
+              commentsClosed: dto.commentsClosed,
+              commentAccess: dto.commentsClosed ? 'closed' : 'everyone',
+            }
           : {}),
       });
 
@@ -306,6 +395,14 @@ export class EventsService {
       event.category = dto.category.trim();
     }
 
+    if (dto.format !== undefined) {
+      event.format = dto.format.trim();
+    }
+
+    if (dto.theme !== undefined) {
+      event.theme = dto.theme.trim();
+    }
+
     if (dto.city !== undefined) {
       event.city = dto.city.trim();
     }
@@ -316,6 +413,10 @@ export class EventsService {
 
     if (dto.startsAt !== undefined) {
       event.startsAt = new Date(dto.startsAt);
+    }
+
+    if (dto.publishAt !== undefined) {
+      event.publishAt = dto.publishAt ? new Date(dto.publishAt) : null;
     }
 
     if (dto.price !== undefined) {
@@ -330,8 +431,22 @@ export class EventsService {
       event.hideAttendeeNames = dto.hideAttendeeNames;
     }
 
+    if (dto.attendeeVisibility !== undefined) {
+      event.attendeeVisibility = dto.attendeeVisibility;
+    }
+
+    if (dto.notifyOnNewAttendee !== undefined) {
+      event.notifyOnNewAttendee = dto.notifyOnNewAttendee;
+    }
+
+    if (dto.commentAccess !== undefined) {
+      event.commentAccess = dto.commentAccess;
+      event.commentsClosed = dto.commentAccess === 'closed';
+    }
+
     if (dto.commentsClosed !== undefined) {
       event.commentsClosed = dto.commentsClosed;
+      event.commentAccess = dto.commentsClosed ? 'closed' : 'everyone';
     }
 
     const savedEvent = await this.eventsRepository.save(event);
@@ -372,9 +487,13 @@ export class EventsService {
   private buildFindWhere(query: FindEventsDto) {
     const search = query.q?.trim();
     const category = query.category?.trim();
+    const format = query.format?.trim();
+    const theme = query.theme?.trim();
     const priceType = query.priceType ?? 'all';
     const baseWhere = {
       ...(category ? { category } : {}),
+      ...(format ? { format } : {}),
+      ...(theme ? { theme } : {}),
       ...(priceType === 'free'
         ? { price: 0 }
         : priceType === 'paid'
@@ -382,23 +501,39 @@ export class EventsService {
           : {}),
     };
 
+    const visibleWhere = this.buildVisibleEventWhere(baseWhere);
+
     if (!search) {
-      return baseWhere;
+      return visibleWhere;
     }
 
-    return [
-      { ...baseWhere, title: ILike(`%${search}%`) },
-      { ...baseWhere, description: ILike(`%${search}%`) },
-      { ...baseWhere, city: ILike(`%${search}%`) },
-    ];
+    return visibleWhere.flatMap((whereClause) => [
+      { ...whereClause, title: ILike(`%${search}%`) },
+      { ...whereClause, description: ILike(`%${search}%`) },
+      { ...whereClause, city: ILike(`%${search}%`) },
+    ]);
   }
 
   private matchesEventQuery(event: EventEntity, query: FindEventsDto) {
+    if (!this.isEventPublished(event)) {
+      return false;
+    }
+
     const search = query.q?.trim().toLowerCase();
     const category = query.category?.trim();
+    const format = query.format?.trim();
+    const theme = query.theme?.trim();
     const priceType = query.priceType ?? 'all';
 
     if (category && event.category !== category) {
+      return false;
+    }
+
+    if (format && event.format !== format) {
+      return false;
+    }
+
+    if (theme && event.theme !== theme) {
       return false;
     }
 
@@ -425,13 +560,20 @@ export class EventsService {
       title: event.title,
       description: event.description,
       category: event.category,
+      format: event.format,
+      theme: event.theme,
       city: event.city,
       posterUrl: event.posterUrl,
       startsAt: event.startsAt,
+      publishAt: event.publishAt,
       price: Number(event.price),
       capacity: event.capacity,
       hideAttendeeNames: event.hideAttendeeNames,
+      attendeeVisibility: event.attendeeVisibility,
+      notifyOnNewAttendee: event.notifyOnNewAttendee,
+      commentAccess: event.commentAccess,
       commentsClosed: event.commentsClosed,
+      isPublished: this.isEventPublished(event),
       organizer: event.organizer
         ? {
             id: event.organizer.id,
@@ -446,6 +588,107 @@ export class EventsService {
   private ensureOrganizerAccess(event: EventEntity, organizerId: string) {
     if (event.organizerId !== organizerId) {
       throw new ForbiddenException('Only the organizer can manage this event');
+    }
+  }
+
+  private buildVisibleEventWhere(
+    baseWhere: FindOptionsWhere<EventEntity>,
+    viewerId?: string | null,
+  ): FindOptionsWhere<EventEntity>[] {
+    const visiblePublished = [
+      { ...baseWhere, publishAt: IsNull() },
+      { ...baseWhere, publishAt: LessThanOrEqual(new Date()) },
+    ];
+
+    if (!viewerId) {
+      return visiblePublished;
+    }
+
+    return [...visiblePublished, { ...baseWhere, organizerId: viewerId }];
+  }
+
+  private isEventPublished(event: EventEntity) {
+    return !event.publishAt || event.publishAt.getTime() <= Date.now();
+  }
+
+  private ensureViewerCanOpenEvent(event: EventEntity, viewerId?: string | null) {
+    if (this.isEventPublished(event) || event.organizerId === viewerId) {
+      return;
+    }
+
+    throw new NotFoundException(`Event ${event.id} was not found`);
+  }
+
+  private canViewerSeeReferencedEvent(event: EventEntity, viewerId?: string | null) {
+    return this.isEventPublished(event) || event.organizerId === viewerId;
+  }
+
+  private async canViewerSeeAttendees(
+    event: EventEntity,
+    viewerId?: string | null,
+  ) {
+    if (event.attendeeVisibility === 'everyone') {
+      return true;
+    }
+
+    if (!viewerId) {
+      return false;
+    }
+
+    if (event.organizerId === viewerId) {
+      return true;
+    }
+
+    if (event.attendeeVisibility === 'nobody') {
+      return false;
+    }
+
+    if (!this.registrationsRepository) {
+      return Boolean(this.inMemoryData.findRegistrationByEventAndUser(event.id, viewerId));
+    }
+
+    const registration = await this.registrationsRepository.findOne({
+      where: { eventId: event.id, userId: viewerId },
+    });
+
+    return Boolean(registration);
+  }
+
+  private buildFindOrder(
+    sortBy: FindEventsDto['sortBy'],
+  ): FindOptionsOrder<EventEntity> {
+    switch (sortBy) {
+      case 'date_desc':
+        return { startsAt: 'DESC' };
+      case 'newest':
+        return { createdAt: 'DESC' };
+      case 'price_asc':
+        return { price: 'ASC' };
+      case 'price_desc':
+        return { price: 'DESC' };
+      case 'date_asc':
+      default:
+        return { startsAt: 'ASC' };
+    }
+  }
+
+  private compareEvents(
+    left: EventEntity,
+    right: EventEntity,
+    sortBy: FindEventsDto['sortBy'],
+  ) {
+    switch (sortBy) {
+      case 'date_desc':
+        return right.startsAt.getTime() - left.startsAt.getTime();
+      case 'newest':
+        return right.createdAt.getTime() - left.createdAt.getTime();
+      case 'price_asc':
+        return Number(left.price) - Number(right.price);
+      case 'price_desc':
+        return Number(right.price) - Number(left.price);
+      case 'date_asc':
+      default:
+        return left.startsAt.getTime() - right.startsAt.getTime();
     }
   }
 }

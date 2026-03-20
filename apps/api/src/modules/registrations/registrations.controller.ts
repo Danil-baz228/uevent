@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateRegistrationDto } from './dto/create-registration.dto';
+import { UpdateRegistrationReminderDto } from './dto/update-registration-reminder.dto';
 import { RegistrationsService } from './registrations.service';
 
 @ApiTags('registrations')
@@ -21,5 +22,14 @@ export class RegistrationsController {
   @Get('me')
   findMine(@CurrentUser() user: { sub: string }) {
     return this.registrationsService.findMine(user.sub);
+  }
+
+  @Patch(':eventId/reminder')
+  updateReminder(
+    @Param('eventId') eventId: string,
+    @Body() dto: UpdateRegistrationReminderDto,
+    @CurrentUser() user: { sub: string },
+  ) {
+    return this.registrationsService.updateReminder(eventId, dto, user.sub);
   }
 }

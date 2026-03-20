@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { translateFormat, translateTheme } from '../i18n/translations';
 import {
   ApiRegistration,
   createCheckoutSession,
@@ -20,12 +21,18 @@ export function DiscoverPage() {
   const { copy, locale, translateCategory } = useLanguage();
   const query = searchParams.get('q') ?? '';
   const category = searchParams.get('category') ?? 'all';
+  const format = searchParams.get('format') ?? 'all';
+  const theme = searchParams.get('theme') ?? 'all';
   const priceType = searchParams.get('priceType') ?? 'all';
+  const sortBy = searchParams.get('sortBy') ?? 'date_asc';
   const page = Number(searchParams.get('page') ?? '1');
   const { events, meta, status, error } = useEvents({
     q: query,
     category,
+    format,
+    theme,
     priceType: priceType as 'free' | 'paid' | 'all',
+    sortBy: sortBy as 'date_asc' | 'date_desc' | 'newest' | 'price_asc' | 'price_desc',
     page,
     limit: 6,
   });
@@ -33,6 +40,28 @@ export function DiscoverPage() {
   const [activeRegistrationId, setActiveRegistrationId] = useState<string | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [registrations, setRegistrations] = useState<ApiRegistration[]>([]);
+  const filterCopy =
+    locale === 'uk-UA'
+      ? {
+          format: 'Формат',
+          theme: 'Тема',
+          sortBy: 'Сортування',
+          sortDateAsc: 'За датою: найближчі спочатку',
+          sortDateDesc: 'За датою: пізніші спочатку',
+          sortNewest: 'Нові спочатку',
+          sortPriceAsc: 'За ціною: від дешевих',
+          sortPriceDesc: 'За ціною: від дорогих',
+        }
+      : {
+          format: 'Format',
+          theme: 'Theme',
+          sortBy: 'Sort by',
+          sortDateAsc: 'Date: soonest first',
+          sortDateDesc: 'Date: latest first',
+          sortNewest: 'Newest added',
+          sortPriceAsc: 'Price: low to high',
+          sortPriceDesc: 'Price: high to low',
+        };
 
   useEffect(() => {
     let active = true;
@@ -185,6 +214,39 @@ export function DiscoverPage() {
           </label>
 
           <label className="field compact-field">
+            <span>{filterCopy.format}</span>
+            <select
+              value={format}
+              onChange={(event) => updateQuery({ format: event.target.value })}
+            >
+              <option value="all">{copy.common.all}</option>
+              <option value="Meetup">{translateFormat('Meetup', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Workshop">{translateFormat('Workshop', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Conference">{translateFormat('Conference', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Lecture">{translateFormat('Lecture', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+            </select>
+          </label>
+
+          <label className="field compact-field">
+            <span>{filterCopy.theme}</span>
+            <select
+              value={theme}
+              onChange={(event) => updateQuery({ theme: event.target.value })}
+            >
+              <option value="all">{copy.common.all}</option>
+              <option value="Community">{translateTheme('Community', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Technology">{translateTheme('Technology', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Startups">{translateTheme('Startups', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Design">{translateTheme('Design', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Business">{translateTheme('Business', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Education">{translateTheme('Education', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Art">{translateTheme('Art', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Psychology">{translateTheme('Psychology', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+              <option value="Sports">{translateTheme('Sports', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+            </select>
+          </label>
+
+          <label className="field compact-field">
             <span>{copy.common.price}</span>
             <select
               value={priceType}
@@ -193,6 +255,20 @@ export function DiscoverPage() {
               <option value="all">{copy.common.all}</option>
               <option value="free">{copy.common.free}</option>
               <option value="paid">{copy.common.paid}</option>
+            </select>
+          </label>
+
+          <label className="field compact-field">
+            <span>{filterCopy.sortBy}</span>
+            <select
+              value={sortBy}
+              onChange={(event) => updateQuery({ sortBy: event.target.value })}
+            >
+              <option value="date_asc">{filterCopy.sortDateAsc}</option>
+              <option value="date_desc">{filterCopy.sortDateDesc}</option>
+              <option value="newest">{filterCopy.sortNewest}</option>
+              <option value="price_asc">{filterCopy.sortPriceAsc}</option>
+              <option value="price_desc">{filterCopy.sortPriceDesc}</option>
             </select>
           </label>
         </div>
@@ -222,6 +298,8 @@ export function DiscoverPage() {
               <div className="list-card-copy">
                 <div className="list-card-topline">
                   <span className="pill">{translateCategory(event.category)}</span>
+                  <span className="pill">{translateFormat(event.format, locale === 'uk-UA' ? 'uk' : 'en')}</span>
+                  <span className="pill">{translateTheme(event.theme, locale === 'uk-UA' ? 'uk' : 'en')}</span>
                 </div>
                 <h3>
                   <Link to={`/events/${event.id}`} className="event-link">

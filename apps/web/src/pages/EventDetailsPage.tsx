@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { translateFormat, translateTheme } from '../i18n/translations';
 import {
   ApiRegistration,
   EventDetailsResponse,
@@ -17,6 +18,7 @@ import {
   formatPrice,
   getEventPosterUrl,
   updateEvent,
+  updateRegistrationReminder,
   updateEventComment,
 } from '../lib/api';
 
@@ -41,15 +43,103 @@ export function EventDetailsPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedPoster, setSelectedPoster] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState('');
+  const [reminderAt, setReminderAt] = useState('');
+  const [reminderStatus, setReminderStatus] = useState<'idle' | 'saving'>('idle');
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
     category: '',
+    format: 'Meetup',
+    theme: 'Community',
+    attendeeVisibility: 'everyone' as 'everyone' | 'registered_only' | 'nobody',
+    notifyOnNewAttendee: true,
+    commentAccess: 'everyone' as 'everyone' | 'registered_only' | 'closed',
     city: '',
     startsAt: '',
+    publishAt: '',
     price: '0',
     capacity: '50',
   });
+  const structureCopy =
+    locale === 'uk-UA'
+      ? { format: 'Формат', theme: 'Тема' }
+      : { format: 'Format', theme: 'Theme' };
+  const attendeeCopy =
+    locale === 'uk-UA'
+      ? {
+          label: 'Хто бачить учасників',
+          everyone: 'Усі',
+          registeredOnly: 'Тільки зареєстровані',
+          nobody: 'Ніхто',
+          hidden: 'Список учасників прихований для вас.',
+        }
+      : {
+          label: 'Who can see attendees',
+          everyone: 'Everyone',
+          registeredOnly: 'Registered users only',
+          nobody: 'Nobody',
+          hidden: 'The attendee list is hidden for you.',
+        };
+  const publicationCopy =
+    locale === 'uk-UA'
+      ? {
+          startsAtLabel: 'Дата і час проведення',
+          label: 'Дата викладення',
+          helper: 'Залиште порожнім, якщо подію треба показувати одразу.',
+          banner: (value: string) =>
+            `Публікацію заплановано на ${formatEventDate(value, locale)}. Поки що цю сторінку бачите лише ви.`,
+          ticketNotice: 'До дати викладення реєстрація та купівля квитків недоступні.',
+        }
+      : {
+          startsAtLabel: 'Event date and time',
+          label: 'Publish date',
+          helper: 'Leave empty if the event should be visible immediately.',
+          banner: (value: string) =>
+            `Publication is scheduled for ${formatEventDate(value, locale)}. For now, only you can see this page.`,
+          ticketNotice: 'Registrations and ticket purchases stay unavailable until publication.',
+        };
+  const eventSettingsCopy =
+    locale === 'uk-UA'
+      ? {
+          notifyOnNewAttendee: 'Сповіщати про нових відвідувачів',
+          notifyStateOn: 'Увімкнено',
+          notifyStateOff: 'Вимкнено',
+          commentAccess: 'Коментарі',
+          commentsEveryone: 'Відкриті для всіх авторизованих',
+          commentsRegisteredOnly: 'Тільки для зареєстрованих',
+          commentsClosed: 'Закриті',
+          commentsNeedRegistration: 'Коментувати можуть лише зареєстровані учасники.',
+          commentsNeedSignIn: 'Увійдіть, щоб залишити коментар.',
+          reminderTitle: 'Нагадування',
+          reminderHint: 'Оберіть, коли нагадати вам про цю подію.',
+          reminderSaved: 'Нагадування збережено.',
+          reminderButton: 'Зберегти нагадування',
+          reminderDisabled: 'Нагадування стане доступним після реєстрації або покупки квитка.',
+        }
+      : {
+          notifyOnNewAttendee: 'Notify about new attendees',
+          notifyStateOn: 'Enabled',
+          notifyStateOff: 'Disabled',
+          commentAccess: 'Comments',
+          commentsEveryone: 'Open for signed-in users',
+          commentsRegisteredOnly: 'Registered attendees only',
+          commentsClosed: 'Closed',
+          commentsNeedRegistration: 'Only registered attendees can comment here.',
+          commentsNeedSignIn: 'Sign in to leave a comment.',
+          reminderTitle: 'Reminder',
+          reminderHint: 'Choose when you want to be reminded about this event.',
+          reminderSaved: 'Reminder saved.',
+          reminderButton: 'Save reminder',
+          reminderDisabled: 'Reminders become available after registration or ticket purchase.',
+        };
+  const booleanCopy =
+    locale === 'uk-UA'
+      ? { yes: 'Так', no: 'Ні' }
+      : { yes: 'Yes', no: 'No' };
+  const reminderTooLateMessage =
+    locale === 'uk-UA'
+      ? 'Час нагадування має бути раніше за початок події.'
+      : 'Reminder time must be earlier than the event start.';
 
   useEffect(() => {
     let active = true;
@@ -59,7 +149,7 @@ export function EventDetailsPage() {
       setMessage('');
 
       try {
-        const payload = await fetchEventById(eventId);
+        const payload = await fetchEventById(eventId, token);
 
         if (!active) {
           return;
@@ -70,8 +160,16 @@ export function EventDetailsPage() {
           title: payload.title,
           description: payload.description,
           category: payload.category,
+          format: payload.format,
+          theme: payload.theme,
+          attendeeVisibility: payload.attendeeVisibility,
+          notifyOnNewAttendee: payload.notifyOnNewAttendee,
+          commentAccess: payload.commentAccess,
           city: payload.city,
           startsAt: new Date(payload.startsAt).toISOString().slice(0, 16),
+          publishAt: payload.publishAt
+            ? new Date(payload.publishAt).toISOString().slice(0, 16)
+            : '',
           price: String(payload.price),
           capacity: String(payload.capacity),
         });
@@ -92,7 +190,15 @@ export function EventDetailsPage() {
     return () => {
       active = false;
     };
-  }, [eventId]);
+  }, [eventId, token]);
+
+  useEffect(() => {
+    setReminderAt(
+      registration?.reminderAt
+        ? new Date(registration.reminderAt).toISOString().slice(0, 16)
+        : '',
+    );
+  }, [registration?.reminderAt]);
 
   useEffect(() => {
     let active = true;
@@ -305,7 +411,7 @@ export function EventDetailsPage() {
   }
 
   async function handleOrganizerSetting(
-    field: 'hideAttendeeNames' | 'commentsClosed',
+    field: 'notifyOnNewAttendee',
     value: boolean,
   ) {
     if (!token || !event) {
@@ -317,21 +423,41 @@ export function EventDetailsPage() {
 
     try {
       await updateEvent(event.id, { [field]: value }, token);
-      const refreshedEvent = await fetchEventById(event.id);
+      const refreshedEvent = await fetchEventById(event.id, token);
       setEvent(refreshedEvent);
-      setMessage(
-        field === 'hideAttendeeNames'
-          ? value
-            ? copy.eventDetails.hideNamesEnabled
-            : copy.eventDetails.hideNamesDisabled
-          : value
-            ? copy.eventDetails.commentsClosedEnabled
-            : copy.eventDetails.commentsClosedDisabled,
-      );
+      setMessage(copy.eventDetails.eventUpdated);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : copy.eventDetails.updateFailed);
     } finally {
       setSettingsStatus('idle');
+    }
+  }
+
+  async function handleReminderSave() {
+    if (!token || !event || !registration || registration.status !== 'confirmed') {
+      return;
+    }
+
+    if (reminderAt && new Date(reminderAt).getTime() >= new Date(event.startsAt).getTime()) {
+      setMessage(reminderTooLateMessage);
+      return;
+    }
+
+    setReminderStatus('saving');
+    setMessage('');
+
+    try {
+      const updatedRegistration = await updateRegistrationReminder(
+        event.id,
+        reminderAt ? new Date(reminderAt).toISOString() : null,
+        token,
+      );
+      setRegistration(updatedRegistration);
+      setMessage(eventSettingsCopy.reminderSaved);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : copy.eventDetails.updateFailed);
+    } finally {
+      setReminderStatus('idle');
     }
   }
 
@@ -350,12 +476,19 @@ export function EventDetailsPage() {
       payload.append('title', editForm.title);
       payload.append('description', editForm.description);
       payload.append('category', editForm.category);
+      payload.append('format', editForm.format);
+      payload.append('theme', editForm.theme);
+      payload.append('attendeeVisibility', editForm.attendeeVisibility);
+      payload.append('notifyOnNewAttendee', String(editForm.notifyOnNewAttendee));
+      payload.append('commentAccess', editForm.commentAccess);
       payload.append('city', editForm.city);
       payload.append('startsAt', new Date(editForm.startsAt).toISOString());
+      payload.append(
+        'publishAt',
+        editForm.publishAt ? new Date(editForm.publishAt).toISOString() : '',
+      );
       payload.append('price', editForm.price);
       payload.append('capacity', editForm.capacity);
-      payload.append('hideAttendeeNames', String(event.hideAttendeeNames));
-      payload.append('commentsClosed', String(event.commentsClosed));
 
       if (selectedPoster) {
         payload.append('poster', selectedPoster);
@@ -450,6 +583,9 @@ export function EventDetailsPage() {
             alt={`${event.title} poster`}
             className="event-poster-large"
           />
+          {!event.isPublished && event.publishAt ? (
+            <p className="notice warning">{publicationCopy.banner(event.publishAt)}</p>
+          ) : null}
           <span className="pill">{translateCategory(event.category)}</span>
           <h1>{event.title}</h1>
           <p className="muted">
@@ -471,36 +607,20 @@ export function EventDetailsPage() {
             <div className="settings-toggle-grid">
               <button
                 type="button"
-                className={`settings-tile ${event.hideAttendeeNames ? 'active' : ''}`}
+                className={`settings-tile ${event.notifyOnNewAttendee ? 'active' : ''}`}
                 disabled={settingsStatus === 'saving'}
                 onClick={() =>
                   void handleOrganizerSetting(
-                    'hideAttendeeNames',
-                    !event.hideAttendeeNames,
+                    'notifyOnNewAttendee',
+                    !event.notifyOnNewAttendee,
                   )
                 }
               >
-                <strong>{copy.eventDetails.hideNamesTitle}</strong>
+                <strong>{eventSettingsCopy.notifyOnNewAttendee}</strong>
                 <span className="muted">
-                  {event.hideAttendeeNames
-                    ? copy.eventDetails.hideNamesOn
-                    : copy.eventDetails.hideNamesOff}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className={`settings-tile ${event.commentsClosed ? 'active' : ''}`}
-                disabled={settingsStatus === 'saving'}
-                onClick={() =>
-                  void handleOrganizerSetting('commentsClosed', !event.commentsClosed)
-                }
-              >
-                <strong>{copy.eventDetails.closeCommentsTitle}</strong>
-                <span className="muted">
-                  {event.commentsClosed
-                    ? copy.eventDetails.closeCommentsOn
-                    : copy.eventDetails.closeCommentsOff}
+                  {event.notifyOnNewAttendee
+                    ? eventSettingsCopy.notifyStateOn
+                    : eventSettingsCopy.notifyStateOff}
                 </span>
               </button>
 
@@ -521,7 +641,7 @@ export function EventDetailsPage() {
 
             {isEditMode ? (
               <form className="settings-editor" onSubmit={handleEventUpdate}>
-                <div className="form-grid">
+                <div className="event-structure-grid">
                   <label className="field">
                     <span>{copy.create.titleLabel}</span>
                     <input
@@ -548,6 +668,102 @@ export function EventDetailsPage() {
                       required
                     />
                   </label>
+                  <label className="field">
+                    <span>{structureCopy.format}</span>
+                    <select
+                      value={editForm.format}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          format: event.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="Meetup">{translateFormat('Meetup', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Workshop">{translateFormat('Workshop', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Conference">{translateFormat('Conference', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Lecture">{translateFormat('Lecture', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{structureCopy.theme}</span>
+                    <select
+                      value={editForm.theme}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          theme: event.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="Community">{translateTheme('Community', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Technology">{translateTheme('Technology', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Startups">{translateTheme('Startups', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Design">{translateTheme('Design', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Business">{translateTheme('Business', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Education">{translateTheme('Education', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Art">{translateTheme('Art', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Psychology">{translateTheme('Psychology', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                      <option value="Sports">{translateTheme('Sports', locale === 'uk-UA' ? 'uk' : 'en')}</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{attendeeCopy.label}</span>
+                    <select
+                      value={editForm.attendeeVisibility}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          attendeeVisibility: event.target.value as
+                            | 'everyone'
+                            | 'registered_only'
+                            | 'nobody',
+                        }))
+                      }
+                    >
+                      <option value="everyone">{attendeeCopy.everyone}</option>
+                      <option value="registered_only">{attendeeCopy.registeredOnly}</option>
+                      <option value="nobody">{attendeeCopy.nobody}</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{eventSettingsCopy.notifyOnNewAttendee}</span>
+                    <select
+                      value={editForm.notifyOnNewAttendee ? 'yes' : 'no'}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          notifyOnNewAttendee: event.target.value === 'yes',
+                        }))
+                      }
+                    >
+                      <option value="yes">{booleanCopy.yes}</option>
+                      <option value="no">{booleanCopy.no}</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{eventSettingsCopy.commentAccess}</span>
+                    <select
+                      value={editForm.commentAccess}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          commentAccess: event.target.value as
+                            | 'everyone'
+                            | 'registered_only'
+                            | 'closed',
+                        }))
+                      }
+                    >
+                      <option value="everyone">{eventSettingsCopy.commentsEveryone}</option>
+                      <option value="registered_only">
+                        {eventSettingsCopy.commentsRegisteredOnly}
+                      </option>
+                      <option value="closed">{eventSettingsCopy.commentsClosed}</option>
+                    </select>
+                  </label>
                 </div>
 
                 <label className="field">
@@ -565,7 +781,7 @@ export function EventDetailsPage() {
                   />
                 </label>
 
-                <div className="form-grid">
+                <div className="event-timing-grid">
                   <label className="field">
                     <span>{copy.create.cityLabel}</span>
                     <input
@@ -580,7 +796,7 @@ export function EventDetailsPage() {
                     />
                   </label>
                   <label className="field">
-                    <span>{copy.create.dateTimeLabel}</span>
+                    <span>{publicationCopy.startsAtLabel}</span>
                     <input
                       type="datetime-local"
                       value={editForm.startsAt}
@@ -592,6 +808,20 @@ export function EventDetailsPage() {
                       }
                       required
                     />
+                  </label>
+                  <label className="field">
+                    <span>{publicationCopy.label}</span>
+                    <input
+                      type="datetime-local"
+                      value={editForm.publishAt}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          publishAt: event.target.value,
+                        }))
+                      }
+                    />
+                    <small className="field-hint">{publicationCopy.helper}</small>
                   </label>
                 </div>
 
@@ -674,9 +904,12 @@ export function EventDetailsPage() {
 
         <article className="form-card">
           <span className="eyebrow">{copy.eventDetails.commentsEyebrow}</span>
-          {event.commentsClosed ? (
-            <p className="notice">{copy.eventDetails.commentsClosed}</p>
-          ) : token ? (
+          {event.commentAccess === 'closed' ? (
+            <p className="notice">{eventSettingsCopy.commentsClosed}</p>
+          ) : token &&
+            (event.commentAccess === 'everyone' ||
+              isOrganizer ||
+              registration?.status === 'confirmed') ? (
             <form className="comment-form" onSubmit={handleCommentSubmit}>
               {commentMode !== 'create' ? (
                 <div className="comment-mode-row">
@@ -716,7 +949,11 @@ export function EventDetailsPage() {
               </button>
             </form>
           ) : (
-            <p className="muted">{copy.eventDetails.signInToDiscuss}</p>
+            <p className="muted">
+              {token
+                ? eventSettingsCopy.commentsNeedRegistration
+                : eventSettingsCopy.commentsNeedSignIn}
+            </p>
           )}
 
           {commentMessage ? <p className="notice error">{commentMessage}</p> : null}
@@ -853,7 +1090,31 @@ export function EventDetailsPage() {
           </p>
 
           {registration?.status === 'confirmed' ? (
-            <p className="notice success">{copy.eventDetails.registrationConfirmed}</p>
+            <>
+              <p className="notice success">{copy.eventDetails.registrationConfirmed}</p>
+              <label className="field">
+                <span>{eventSettingsCopy.reminderTitle}</span>
+                <input
+                  type="datetime-local"
+                  value={reminderAt}
+                  max={new Date(event.startsAt).toISOString().slice(0, 16)}
+                  onChange={(event) => setReminderAt(event.target.value)}
+                />
+                <small className="field-hint">{eventSettingsCopy.reminderHint}</small>
+              </label>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={reminderStatus === 'saving'}
+                onClick={() => void handleReminderSave()}
+              >
+                {reminderStatus === 'saving'
+                  ? copy.common.saving
+                  : eventSettingsCopy.reminderButton}
+              </button>
+            </>
+          ) : !event.isPublished ? (
+            <p className="notice warning">{publicationCopy.ticketNotice}</p>
           ) : registration?.status === 'pending_payment' ? (
             <p className="notice">{copy.common.paymentPending}</p>
           ) : event.price > 0 ? (
@@ -876,6 +1137,10 @@ export function EventDetailsPage() {
             </button>
           )}
 
+          {!registration ? (
+            <p className="muted">{eventSettingsCopy.reminderDisabled}</p>
+          ) : null}
+
           {message ? <p className="notice">{message}</p> : null}
           <Link to="/discover" className="secondary-button">
             {copy.common.backToDiscover}
@@ -884,7 +1149,9 @@ export function EventDetailsPage() {
 
         <article className="form-card">
           <span className="eyebrow">{copy.eventDetails.attendeesEyebrow}</span>
-          {event.attendees.length === 0 ? (
+          {!event.canViewAttendees ? (
+            <p className="muted">{attendeeCopy.hidden}</p>
+          ) : event.attendees.length === 0 ? (
             <p className="muted">{copy.eventDetails.noAttendees}</p>
           ) : (
             <div className="related-list">

@@ -14,6 +14,11 @@ import { AddCommentReplies1760000000003 } from './migrations/1760000000003-AddCo
 import { AddPosterUrlToEvents1760000000004 } from './migrations/1760000000004-AddPosterUrlToEvents';
 import { AddEventSettings1760000000005 } from './migrations/1760000000005-AddEventSettings';
 import { AddNotifications1760000000006 } from './migrations/1760000000006-AddNotifications';
+import { AddEventFormatAndTheme1760000000007 } from './migrations/1760000000007-AddEventFormatAndTheme';
+import { AddAttendeeVisibility1760000000008 } from './migrations/1760000000008-AddAttendeeVisibility';
+import { AddEventPublishAt1760000000009 } from './migrations/1760000000009-AddEventPublishAt';
+import { AddEventCommentAccessAndAttendeeNotifications1760000000010 } from './migrations/1760000000010-AddEventCommentAccessAndAttendeeNotifications';
+import { AddRegistrationReminderFields1760000000011 } from './migrations/1760000000011-AddRegistrationReminderFields';
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -37,6 +42,11 @@ const dataSource = new DataSource({
     AddPosterUrlToEvents1760000000004,
     AddEventSettings1760000000005,
     AddNotifications1760000000006,
+    AddEventFormatAndTheme1760000000007,
+    AddAttendeeVisibility1760000000008,
+    AddEventPublishAt1760000000009,
+    AddEventCommentAccessAndAttendeeNotifications1760000000010,
+    AddRegistrationReminderFields1760000000011,
   ],
   synchronize: false,
 });

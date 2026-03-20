@@ -28,13 +28,20 @@ export type ApiEvent = {
   title: string;
   description: string;
   category: string;
+  format: string;
+  theme: string;
   city: string;
   posterUrl: string | null;
   startsAt: string;
+  publishAt: string | null;
   price: number;
   capacity: number;
   hideAttendeeNames: boolean;
+  attendeeVisibility: 'everyone' | 'registered_only' | 'nobody';
+  notifyOnNewAttendee: boolean;
+  commentAccess: 'everyone' | 'registered_only' | 'closed';
   commentsClosed: boolean;
+  isPublished: boolean;
   organizer: {
     id: string;
     displayName: string;
@@ -65,6 +72,7 @@ export type EventComment = {
 };
 
 export type EventDetailsResponse = ApiEvent & {
+  canViewAttendees: boolean;
   attendees: EventAttendee[];
   comments: EventComment[];
   organizerEvents: ApiEvent[];
@@ -84,7 +92,10 @@ export type EventListResponse = {
 export type EventQueryParams = {
   q?: string;
   category?: string;
+  format?: string;
+  theme?: string;
   priceType?: 'free' | 'paid' | 'all';
+  sortBy?: 'date_asc' | 'date_desc' | 'newest' | 'price_asc' | 'price_desc';
   page?: number;
   limit?: number;
 };
@@ -93,11 +104,17 @@ export type CreateEventPayload = {
   title: string;
   description: string;
   category: string;
+  format: string;
+  theme: string;
   city: string;
   posterUrl?: string;
   startsAt: string;
+  publishAt?: string | null;
   price?: number;
   capacity?: number;
+  attendeeVisibility?: 'everyone' | 'registered_only' | 'nobody';
+  notifyOnNewAttendee?: boolean;
+  commentAccess?: 'everyone' | 'registered_only' | 'closed';
 };
 
 export type UpdateEventPayload = Partial<CreateEventPayload> & {
@@ -140,6 +157,8 @@ export type ApiRegistration = {
   amountTotal: number;
   stripeCheckoutSessionId: string | null;
   stripePaymentStatus: string | null;
+  reminderAt: string | null;
+  reminderSentAt: string | null;
   createdAt: string;
   updatedAt: string;
   event: ApiEvent;
@@ -180,7 +199,12 @@ export type ApiNotification = {
   id: string;
   userId: string;
   eventId: string | null;
-  type: 'registration_confirmed' | 'payment_confirmed' | 'new_attendee' | 'new_comment';
+  type:
+    | 'registration_confirmed'
+    | 'payment_confirmed'
+    | 'new_attendee'
+    | 'new_comment'
+    | 'event_reminder';
   title: string;
   body: string;
   isRead: boolean;
@@ -250,8 +274,20 @@ export function fetchEventsWithQuery(params: EventQueryParams) {
     searchParams.set('category', params.category);
   }
 
+  if (params.format && params.format !== 'all') {
+    searchParams.set('format', params.format);
+  }
+
+  if (params.theme && params.theme !== 'all') {
+    searchParams.set('theme', params.theme);
+  }
+
   if (params.priceType && params.priceType !== 'all') {
     searchParams.set('priceType', params.priceType);
+  }
+
+  if (params.sortBy && params.sortBy !== 'date_asc') {
+    searchParams.set('sortBy', params.sortBy);
   }
 
   if (params.page) {
@@ -267,8 +303,16 @@ export function fetchEventsWithQuery(params: EventQueryParams) {
   return requestJson<EventListResponse>(`/events${query ? `?${query}` : ''}`);
 }
 
-export function fetchEventById(eventId: string) {
-  return requestJson<EventDetailsResponse>(`/events/${eventId}`);
+export function fetchEventById(eventId: string, token?: string | null) {
+  return requestJson<EventDetailsResponse>(`/events/${eventId}`, {
+    token,
+  });
+}
+
+export function fetchMyScheduledEvents(token: string) {
+  return requestJson<ApiEvent[]>('/events/me/scheduled', {
+    token,
+  });
 }
 
 export function createEventComment(
@@ -357,6 +401,18 @@ export function createRegistration(eventId: string, token: string, quantity = 1)
 export function fetchMyRegistrations(token: string) {
   return requestJson<ApiRegistration[]>('/registrations/me', {
     token,
+  });
+}
+
+export function updateRegistrationReminder(
+  eventId: string,
+  reminderAt: string | null,
+  token: string,
+) {
+  return requestJson<ApiRegistration>(`/registrations/${eventId}/reminder`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ reminderAt }),
   });
 }
 

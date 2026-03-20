@@ -244,8 +244,56 @@ export const categoryLabels: Record<Language, Record<string, string>> = {
   },
 };
 
+export const formatLabels: Record<Language, Record<string, string>> = {
+  en: {
+    Meetup: 'Meetup',
+    Workshop: 'Workshop',
+    Conference: 'Conference',
+    Lecture: 'Lecture',
+  },
+  uk: {
+    Meetup: 'Мітап',
+    Workshop: 'Воркшоп',
+    Conference: 'Конференція',
+    Lecture: 'Лекція',
+  },
+};
+
+export const themeLabels: Record<Language, Record<string, string>> = {
+  en: {
+    Community: 'Community',
+    Technology: 'Technology',
+    Startups: 'Startups',
+    Design: 'Design',
+    Business: 'Business',
+    Education: 'Education',
+    Art: 'Art',
+    Psychology: 'Psychology',
+    Sports: 'Sports',
+  },
+  uk: {
+    Community: 'Спільнота',
+    Technology: 'Технології',
+    Startups: 'Стартапи',
+    Design: 'Дизайн',
+    Business: 'Бізнес',
+    Education: 'Освіта',
+    Art: 'Мистецтво',
+    Psychology: 'Психологія',
+    Sports: 'Спорт',
+  },
+};
+
 export function translateCategory(category: string, language: Language) {
   return categoryLabels[language][category] ?? category;
+}
+
+export function translateFormat(format: string, language: Language) {
+  return formatLabels[language][format] ?? format;
+}
+
+export function translateTheme(theme: string, language: Language) {
+  return themeLabels[language][theme] ?? theme;
 }
 
 export const translations: Record<Language, TranslationDictionary> = {

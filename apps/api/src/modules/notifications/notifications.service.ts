@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventEntity } from '../events/entities/event.entity';
+import { EventRegistrationEntity } from '../registrations/entities/event-registration.entity';
 import { NotificationEntity, NotificationType } from './entities/notification.entity';
 
 type CreateNotificationInput = {
@@ -26,6 +27,11 @@ export class NotificationsService {
     @Optional()
     @InjectRepository(NotificationEntity)
     private readonly notificationsRepository: Repository<NotificationEntity> | undefined,
+    @Optional()
+    @InjectRepository(EventRegistrationEntity)
+    private readonly registrationsRepository:
+      | Repository<EventRegistrationEntity>
+      | undefined,
   ) {}
 
   async create(input: CreateNotificationInput) {
@@ -53,6 +59,8 @@ export class NotificationsService {
   }
 
   async findMine(userId: string) {
+    await this.processDueReminders(userId);
+
     if (!this.notificationsRepository) {
       return this.inMemoryData
         .listNotificationsByUser(userId)
@@ -154,7 +162,7 @@ export class NotificationsService {
     attendeeName: string,
     attendeeId: string,
   ) {
-    if (!organizerId || organizerId === attendeeId) {
+    if (!organizerId || organizerId === attendeeId || !event.notifyOnNewAttendee) {
       return null;
     }
 
@@ -186,6 +194,16 @@ export class NotificationsService {
     });
   }
 
+  async notifyEventReminder(userId: string, event: EventEntity) {
+    return this.create({
+      userId,
+      eventId: event.id,
+      type: 'event_reminder',
+      title: 'Event reminder',
+      body: `${event.title} starts on ${event.startsAt.toLocaleString('en-US')}.`,
+    });
+  }
+
   private serialize(notification: NotificationEntity) {
     return {
       id: notification.id,
@@ -197,5 +215,54 @@ export class NotificationsService {
       isRead: notification.isRead,
       createdAt: notification.createdAt,
     };
+  }
+
+  private async processDueReminders(userId: string) {
+    const now = new Date();
+
+    if (!this.registrationsRepository) {
+      const dueRegistrations = this.inMemoryData
+        .listRegistrationsByUser(userId)
+        .filter(
+          (registration) =>
+            registration.status === 'confirmed' &&
+            Boolean(
+              registration.reminderAt &&
+                registration.reminderAt.getTime() <= now.getTime() &&
+                !registration.reminderSentAt,
+            ),
+        );
+
+      for (const registration of dueRegistrations) {
+        await this.notifyEventReminder(userId, registration.event);
+        this.inMemoryData.updateRegistration(registration.id, {
+          reminderSentAt: now,
+        });
+      }
+
+      return;
+    }
+
+    const dueRegistrations = await this.registrationsRepository.find({
+      where: {
+        userId,
+        status: 'confirmed',
+      },
+      relations: { event: true },
+    });
+
+    for (const registration of dueRegistrations) {
+      if (
+        !registration.reminderAt ||
+        registration.reminderAt.getTime() > now.getTime() ||
+        registration.reminderSentAt
+      ) {
+        continue;
+      }
+
+      await this.notifyEventReminder(userId, registration.event);
+      registration.reminderSentAt = now;
+      await this.registrationsRepository.save(registration);
+    }
   }
 }

@@ -28,12 +28,18 @@ type CreateEventInput = {
   title: string;
   description: string;
   category: string;
+  format: string;
+  theme: string;
   city: string;
   posterUrl?: string | null;
   startsAt: Date;
+  publishAt?: Date | null;
   price?: number;
   capacity?: number;
   hideAttendeeNames?: boolean;
+  attendeeVisibility?: EventEntity['attendeeVisibility'];
+  notifyOnNewAttendee?: boolean;
+  commentAccess?: EventEntity['commentAccess'];
   commentsClosed?: boolean;
   organizerId?: string | null;
   createdAt?: Date;
@@ -49,6 +55,8 @@ type CreateRegistrationInput = {
   amountTotal?: number;
   stripeCheckoutSessionId?: string | null;
   stripePaymentStatus?: string | null;
+  reminderAt?: Date | null;
+  reminderSentAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -109,10 +117,16 @@ export class InMemoryDataService {
         description:
           'A live evening for founders, PMs, and developers who want to test ideas and meet future collaborators.',
         category: 'Networking',
+        format: 'Meetup',
+        theme: 'Startups',
         city: 'Kharkiv',
         startsAt: new Date('2026-04-08T15:30:00.000Z'),
+        publishAt: null,
         price: 0,
         capacity: 120,
+        attendeeVisibility: 'everyone',
+        notifyOnNewAttendee: true,
+        commentAccess: 'everyone',
         organizerId: organizer.id,
         createdAt: new Date('2026-03-01T10:00:00.000Z'),
       }),
@@ -122,10 +136,16 @@ export class InMemoryDataService {
         description:
           'Hands-on workshop about event flows, volunteer onboarding, and building stronger local communities.',
         category: 'Workshop',
+        format: 'Workshop',
+        theme: 'Community',
         city: 'Kyiv',
         startsAt: new Date('2026-04-12T13:00:00.000Z'),
+        publishAt: null,
         price: 15,
         capacity: 60,
+        attendeeVisibility: 'everyone',
+        notifyOnNewAttendee: true,
+        commentAccess: 'everyone',
         organizerId: organizer.id,
         createdAt: new Date('2026-03-02T11:00:00.000Z'),
       }),
@@ -135,10 +155,16 @@ export class InMemoryDataService {
         description:
           'An evening for creative coders and sound artists exploring performance, tooling, and collaboration.',
         category: 'Meetup',
+        format: 'Meetup',
+        theme: 'Technology',
         city: 'Lviv',
         startsAt: new Date('2026-04-19T16:15:00.000Z'),
+        publishAt: null,
         price: 0,
         capacity: 80,
+        attendeeVisibility: 'everyone',
+        notifyOnNewAttendee: true,
+        commentAccess: 'everyone',
         organizerId: organizer.id,
         createdAt: new Date('2026-03-03T12:00:00.000Z'),
       }),
@@ -155,6 +181,8 @@ export class InMemoryDataService {
         amountTotal: 0,
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'free',
+        reminderAt: null,
+        reminderSentAt: null,
         createdAt: new Date('2026-03-10T09:30:00.000Z'),
         updatedAt: new Date('2026-03-10T09:30:00.000Z'),
       }),
@@ -420,13 +448,20 @@ export class InMemoryDataService {
       title: input.title,
       description: input.description,
       category: input.category,
+      format: input.format,
+      theme: input.theme,
       city: input.city,
       posterUrl: input.posterUrl ?? null,
       startsAt: input.startsAt,
+      publishAt: input.publishAt ?? null,
       price: input.price ?? 0,
       capacity: input.capacity ?? 50,
       hideAttendeeNames: input.hideAttendeeNames ?? false,
-      commentsClosed: input.commentsClosed ?? false,
+      attendeeVisibility: input.attendeeVisibility ?? 'everyone',
+      notifyOnNewAttendee: input.notifyOnNewAttendee ?? true,
+      commentAccess: input.commentAccess ?? 'everyone',
+      commentsClosed:
+        input.commentsClosed ?? (input.commentAccess ? input.commentAccess === 'closed' : false),
       organizerId: input.organizerId ?? null,
       createdAt: input.createdAt ?? new Date(),
       organizer: null,
@@ -446,6 +481,8 @@ export class InMemoryDataService {
       amountTotal: input.amountTotal ?? 0,
       stripeCheckoutSessionId: input.stripeCheckoutSessionId ?? null,
       stripePaymentStatus: input.stripePaymentStatus ?? null,
+      reminderAt: input.reminderAt ?? null,
+      reminderSentAt: input.reminderSentAt ?? null,
       createdAt: input.createdAt ?? new Date(),
       updatedAt: input.updatedAt ?? input.createdAt ?? new Date(),
       event: null as never,
@@ -506,6 +543,7 @@ export class InMemoryDataService {
     return {
       ...event,
       startsAt: new Date(event.startsAt),
+      publishAt: event.publishAt ? new Date(event.publishAt) : null,
       createdAt: new Date(event.createdAt),
       organizer: event.organizerId ? this.findUserById(event.organizerId) : null,
       registrations: [],
@@ -529,6 +567,10 @@ export class InMemoryDataService {
       ...registration,
       createdAt: new Date(registration.createdAt),
       updatedAt: new Date(registration.updatedAt),
+      reminderAt: registration.reminderAt ? new Date(registration.reminderAt) : null,
+      reminderSentAt: registration.reminderSentAt
+        ? new Date(registration.reminderSentAt)
+        : null,
       event: this.findEventById(registration.eventId) as EventEntity,
       user: this.findUserById(registration.userId) as UserEntity,
     };

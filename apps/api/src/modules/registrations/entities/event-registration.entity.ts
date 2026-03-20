@@ -45,6 +45,12 @@ export class EventRegistrationEntity {
   @Column({ type: 'varchar', nullable: true })
   stripePaymentStatus!: string | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  reminderAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  reminderSentAt!: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

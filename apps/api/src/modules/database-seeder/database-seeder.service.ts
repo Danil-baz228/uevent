@@ -3,8 +3,24 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { hashPassword } from '../auth/auth.utils';
-import { EventEntity } from '../events/entities/event.entity';
+import { AttendeeVisibility, EventEntity } from '../events/entities/event.entity';
 import { UserEntity } from '../users/entities/user.entity';
+
+type StarterEvent = {
+  title: string;
+  description: string;
+  category: string;
+  format: string;
+  theme: string;
+  city: string;
+  startsAt: Date;
+  publishAt: Date | null;
+  price: number;
+  capacity: number;
+  attendeeVisibility: AttendeeVisibility;
+  notifyOnNewAttendee: boolean;
+  commentAccess: EventEntity['commentAccess'];
+};
 
 @Injectable()
 export class DatabaseSeederService implements OnApplicationBootstrap {
@@ -37,36 +53,54 @@ export class DatabaseSeederService implements OnApplicationBootstrap {
       return;
     }
 
-    const starterEvents = [
+    const starterEvents: StarterEvent[] = [
       {
         title: 'Product Night for Curious Builders',
         description:
           'A community meetup for product people, developers, and founders who want to exchange ideas and meet like-minded builders.',
         category: 'Networking',
+        format: 'Meetup',
+        theme: 'Startups',
         city: 'Kharkiv',
         startsAt: new Date('2026-04-08T18:30:00.000Z'),
+        publishAt: null,
         price: 0,
         capacity: 90,
+        attendeeVisibility: 'everyone',
+        notifyOnNewAttendee: true,
+        commentAccess: 'everyone',
       },
       {
         title: 'Design Jam for Community Organizers',
         description:
           'A collaborative workshop for designers and organizers building better local events and community touchpoints.',
         category: 'Workshop',
+        format: 'Workshop',
+        theme: 'Community',
         city: 'Kyiv',
         startsAt: new Date('2026-04-12T16:00:00.000Z'),
+        publishAt: null,
         price: 15,
         capacity: 45,
+        attendeeVisibility: 'everyone',
+        notifyOnNewAttendee: true,
+        commentAccess: 'everyone',
       },
       {
         title: 'Sound and Code Meetup',
         description:
           'An evening for developers, musicians, and creative technologists exploring playful projects at the intersection of audio and software.',
         category: 'Meetup',
+        format: 'Meetup',
+        theme: 'Technology',
         city: 'Lviv',
         startsAt: new Date('2026-04-19T19:15:00.000Z'),
+        publishAt: null,
         price: 0,
         capacity: 70,
+        attendeeVisibility: 'everyone',
+        notifyOnNewAttendee: true,
+        commentAccess: 'everyone',
       },
     ];
 
