@@ -10,6 +10,8 @@ import { In, Repository } from 'typeorm';
 
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventEntity } from '../events/entities/event.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { UsersService } from '../users/users.service';
 import {
   EventRegistrationEntity,
   RegistrationStatus,
@@ -20,6 +22,8 @@ import { CreateRegistrationDto } from './dto/create-registration.dto';
 export class RegistrationsService {
   constructor(
     private readonly inMemoryData: InMemoryDataService,
+    private readonly notificationsService: NotificationsService,
+    private readonly usersService: UsersService,
     @Optional()
     @InjectRepository(EventRegistrationEntity)
     private readonly registrationsRepository:
@@ -58,6 +62,15 @@ export class RegistrationsService {
         stripePaymentStatus: 'free',
       });
 
+      const attendee = await this.usersService.getCurrentUser(userId);
+      await this.notificationsService.notifyRegistrationConfirmed(userId, event);
+      await this.notificationsService.notifyNewAttendee(
+        event.organizerId,
+        event,
+        attendee.displayName,
+        userId,
+      );
+
       return this.serializeRegistration(registration, event);
     }
 
@@ -90,6 +103,15 @@ export class RegistrationsService {
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'free',
       }),
+    );
+
+    const attendee = await this.usersService.getCurrentUser(userId);
+    await this.notificationsService.notifyRegistrationConfirmed(userId, event);
+    await this.notificationsService.notifyNewAttendee(
+      event.organizer?.id ?? null,
+      event,
+      attendee.displayName,
+      userId,
     );
 
     return this.serializeRegistration(registration, event);

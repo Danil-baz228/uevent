@@ -1,0 +1,747 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+import { useAuth } from '../auth/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
+import {
+  fetchMyRegistrations,
+  formatEventDate,
+  formatPrice,
+  getEventPosterUrl,
+} from '../lib/api';
+
+type TicketsStatus = 'loading' | 'success' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'error';
+type AccountSettingsTab = 'profile' | 'email' | 'password' | 'recovery';
+
+export function TicketsPage() {
+  const {
+    user,
+    token,
+    isReady,
+    updateProfile,
+    changeEmail,
+    changePassword,
+  } = useAuth();
+  const { copy, locale, language, translateCategory } = useLanguage();
+
+  const [status, setStatus] = useState<TicketsStatus>('loading');
+  const [message, setMessage] = useState('');
+  const [registrations, setRegistrations] = useState<
+    Awaited<ReturnType<typeof fetchMyRegistrations>>
+  >([]);
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] =
+    useState<AccountSettingsTab>('profile');
+
+  const [settingsName, setSettingsName] = useState('');
+  const [settingsInterests, setSettingsInterests] = useState('');
+  const [settingsStatus, setSettingsStatus] = useState<SaveStatus>('idle');
+  const [settingsMessage, setSettingsMessage] = useState('');
+
+  const [newEmail, setNewEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailStatus, setEmailStatus] = useState<SaveStatus>('idle');
+  const [emailMessage, setEmailMessage] = useState('');
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [nextPassword, setNextPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState<SaveStatus>('idle');
+  const [passwordMessage, setPasswordMessage] = useState('');
+
+  const pageCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            eyebrow: 'Профіль',
+            title: 'Ваш акаунт і квитки',
+            text: 'Спочатку коротка інформація про профіль, а нижче всі реєстрації та покупки в одному місці.',
+            signInNotice: 'Увійдіть, щоб переглянути профіль і ваші квитки.',
+            signInCta: 'Перейти до входу',
+            loading: 'Завантажуємо ваші квитки...',
+            profileEyebrow: 'Профіль',
+            profileTitle: 'Інформація про акаунт',
+            profileText: 'Тут зібрано основні дані профілю, статуси реєстрацій та швидкий доступ до ваших подій.',
+            memberSince: 'З нами з',
+            interests: 'Інтереси',
+            noInterests: 'Поки не вказано',
+            ticketsEyebrow: 'Мої квитки',
+            ticketsTitle: 'Мої квитки та реєстрації',
+            ticketsText: 'Переглядайте підтверджені участі, незавершені оплати та швидко відкривайте потрібну подію.',
+            emptyTitle: 'Поки немає квитків',
+            emptyText:
+              'Зареєструйтесь на безкоштовну подію або купіть платний квиток, щоб тут з’явилася ваша колекція.',
+            openDiscover: 'Перейти до подій',
+            openEvent: 'Відкрити подію',
+            statusConfirmed: 'Підтверджено',
+            statusPending: 'Очікує оплату',
+            statConfirmed: 'Підтверджені',
+            statPending: 'Очікують оплату',
+            statTotal: 'Усього реєстрацій',
+            settingsCta: 'Налаштування',
+            settingsClose: 'Закрити',
+            settingsTitle: 'Налаштування акаунта',
+            tabsTitle: 'Ваш акаунт',
+            profileTab: 'Основне',
+            emailTab: 'Змінити пошту',
+            passwordTab: 'Змінити пароль',
+            recoveryTab: 'Забули пароль?',
+            displayName: 'Ім’я профілю',
+            emailLabel: 'Електронна пошта',
+            interestsLabel: 'Інтереси',
+            interestsHint: 'Через кому: networking, design, music',
+            saveSettings: 'Зберегти зміни',
+            savingSettings: 'Зберігаємо...',
+            settingsSaved: 'Профіль оновлено.',
+            modalProfileTitle: 'Основна інформація',
+            modalProfileText:
+              'Тут можна змінити нік та вподобання. Email лишається окремою дією в сусідній вкладці.',
+            changeEmailTitle: 'Зміна пошти',
+            changeEmailText:
+              'Введіть нову електронну пошту та підтвердьте дію поточним паролем.',
+            newEmailLabel: 'Нова пошта',
+            currentPasswordLabel: 'Поточний пароль',
+            saveEmail: 'Змінити пошту',
+            savingEmail: 'Оновлюємо пошту...',
+            emailSaved: 'Пошту оновлено.',
+            passwordTitle: 'Зміна пароля',
+            passwordText:
+              'Для зміни пароля введіть старий пароль, новий пароль та підтвердження нового пароля.',
+            passwordCurrent: 'Старий пароль',
+            passwordNew: 'Новий пароль',
+            passwordRepeat: 'Підтвердження пароля',
+            savePassword: 'Змінити пароль',
+            savingPassword: 'Оновлюємо пароль...',
+            passwordSaved: 'Пароль оновлено.',
+            recoveryTitle: 'Відновлення доступу',
+            recoveryText:
+              'Цю вкладку підготуємо пізніше. Зараз це лише фронтова заглушка для майбутнього forgot-password flow.',
+            recoveryHint:
+              'Тут пізніше з’явиться відправка листа для скидання пароля або окремий recovery сценарій.',
+            nameLabel: 'Ім’я',
+            failedProfile: 'Не вдалося оновити профіль',
+            failedEmail: 'Не вдалося оновити пошту',
+            failedPassword: 'Не вдалося оновити пароль',
+          }
+        : {
+            eyebrow: 'Account',
+            title: 'Your profile and tickets',
+            text: 'Profile details come first, and all registrations live right below in one clean place.',
+            signInNotice: 'Please sign in to view your profile and tickets.',
+            signInCta: 'Go to login',
+            loading: 'Loading your tickets...',
+            profileEyebrow: 'Profile',
+            profileTitle: 'Account information',
+            profileText:
+              'Your core profile details, registration status, and quick event access live here.',
+            memberSince: 'Member since',
+            interests: 'Interests',
+            noInterests: 'Not specified yet',
+            ticketsEyebrow: 'My tickets',
+            ticketsTitle: 'My tickets and registrations',
+            ticketsText:
+              'Review confirmed spots, pending payments, and jump back into any event page quickly.',
+            emptyTitle: 'No tickets yet',
+            emptyText:
+              'Register for a free event or buy a paid ticket to start building your personal event collection.',
+            openDiscover: 'Open discover',
+            openEvent: 'Open event',
+            statusConfirmed: 'Confirmed',
+            statusPending: 'Payment pending',
+            statConfirmed: 'Confirmed',
+            statPending: 'Pending',
+            statTotal: 'Total registrations',
+            settingsCta: 'Settings',
+            settingsClose: 'Close',
+            settingsTitle: 'Account settings',
+            tabsTitle: 'Your account',
+            profileTab: 'General',
+            emailTab: 'Change email',
+            passwordTab: 'Change password',
+            recoveryTab: 'Forgot password?',
+            displayName: 'Display name',
+            emailLabel: 'Email',
+            interestsLabel: 'Interests',
+            interestsHint: 'Comma separated: networking, design, music',
+            saveSettings: 'Save changes',
+            savingSettings: 'Saving...',
+            settingsSaved: 'Profile updated.',
+            modalProfileTitle: 'General information',
+            modalProfileText:
+              'Update your nickname and interests here. Email is handled in a separate security tab.',
+            changeEmailTitle: 'Change email',
+            changeEmailText:
+              'Enter a new email address and confirm the action with your current password.',
+            newEmailLabel: 'New email',
+            currentPasswordLabel: 'Current password',
+            saveEmail: 'Update email',
+            savingEmail: 'Updating email...',
+            emailSaved: 'Email updated.',
+            passwordTitle: 'Change password',
+            passwordText:
+              'Enter your old password, then the new password and confirmation to update access.',
+            passwordCurrent: 'Old password',
+            passwordNew: 'New password',
+            passwordRepeat: 'Password confirmation',
+            savePassword: 'Update password',
+            savingPassword: 'Updating password...',
+            passwordSaved: 'Password updated.',
+            recoveryTitle: 'Account recovery',
+            recoveryText:
+              'This tab is frontend-only for now and will later become the forgot-password flow.',
+            recoveryHint:
+              'Later this screen can send a recovery email or explain the recovery steps.',
+            nameLabel: 'Name',
+            failedProfile: 'Failed to update profile',
+            failedEmail: 'Failed to update email',
+            failedPassword: 'Failed to update password',
+          },
+    [language],
+  );
+
+  const confirmedCount = registrations.filter(
+    (registration) => registration.status === 'confirmed',
+  ).length;
+  const pendingCount = registrations.length - confirmedCount;
+  const memberSinceLabel = new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+  }).format(new Date(user?.createdAt ?? Date.now()));
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    setSettingsName(user.displayName);
+    setSettingsInterests(user.interests.join(', '));
+    setNewEmail(user.email);
+  }, [user]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadTickets() {
+      if (!token) {
+        if (active) {
+          setRegistrations([]);
+          setStatus('success');
+        }
+        return;
+      }
+
+      setStatus('loading');
+      setMessage('');
+
+      try {
+        const payload = await fetchMyRegistrations(token);
+
+        if (!active) {
+          return;
+        }
+
+        setRegistrations(payload);
+        setStatus('success');
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setStatus('error');
+        setMessage(error instanceof Error ? error.message : 'Failed to load tickets');
+      }
+    }
+
+    void loadTickets();
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  if (!isReady) {
+    return <p className="notice">{copy.common.loadingSession}</p>;
+  }
+
+  if (!user) {
+    return (
+      <section className="empty-state">
+        <span className="eyebrow">{pageCopy.eyebrow}</span>
+        <h1>{pageCopy.title}</h1>
+        <p>{pageCopy.signInNotice}</p>
+        <Link to="/auth" className="primary-button">
+          {pageCopy.signInCta}
+        </Link>
+      </section>
+    );
+  }
+
+  function resetModalFeedback() {
+    setSettingsStatus('idle');
+    setSettingsMessage('');
+    setEmailStatus('idle');
+    setEmailMessage('');
+    setPasswordStatus('idle');
+    setPasswordMessage('');
+  }
+
+  return (
+    <section className="section">
+      <div className="section-header section-header-panel">
+        <span className="eyebrow">{pageCopy.eyebrow}</span>
+        <h1>{pageCopy.title}</h1>
+        <p>{pageCopy.text}</p>
+      </div>
+
+      <div className="account-overview">
+        <article className="account-profile-card">
+          <div className="account-panel-topline">
+            <span className="eyebrow">{pageCopy.profileEyebrow}</span>
+            <button
+              type="button"
+              className={`secondary-button account-settings-button ${
+                settingsOpen ? 'active' : ''
+              }`}
+              onClick={() => {
+                setSettingsOpen((value) => !value);
+                setActiveSettingsTab('profile');
+                resetModalFeedback();
+              }}
+            >
+              {settingsOpen ? pageCopy.settingsClose : pageCopy.settingsCta}
+            </button>
+          </div>
+
+          <div className="account-profile-head">
+            <div className="account-avatar" aria-hidden="true">
+              {user.displayName.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="account-profile-copy">
+              <h2>{pageCopy.profileTitle}</h2>
+              <p>{pageCopy.profileText}</p>
+            </div>
+          </div>
+
+          <div className="account-profile-grid">
+            <div className="account-profile-item">
+              <span>{pageCopy.nameLabel}</span>
+              <strong>{user.displayName}</strong>
+            </div>
+            <div className="account-profile-item">
+              <span>{pageCopy.emailLabel}</span>
+              <strong>{user.email}</strong>
+            </div>
+            <div className="account-profile-item">
+              <span>{pageCopy.memberSince}</span>
+              <strong>{memberSinceLabel}</strong>
+            </div>
+            <div className="account-profile-item">
+              <span>{pageCopy.interests}</span>
+              <strong>
+                {user.interests.length > 0 ? user.interests.join(', ') : pageCopy.noInterests}
+              </strong>
+            </div>
+          </div>
+        </article>
+
+        <div className="account-stats-grid">
+          <article className="account-stat-card">
+            <span>{pageCopy.statConfirmed}</span>
+            <strong>{confirmedCount}</strong>
+          </article>
+          <article className="account-stat-card">
+            <span>{pageCopy.statPending}</span>
+            <strong>{pendingCount}</strong>
+          </article>
+          <article className="account-stat-card">
+            <span>{pageCopy.statTotal}</span>
+            <strong>{registrations.length}</strong>
+          </article>
+        </div>
+      </div>
+
+      <div className="section-header section-header-panel account-tickets-header">
+        <span className="eyebrow">{pageCopy.ticketsEyebrow}</span>
+        <h2>{pageCopy.ticketsTitle}</h2>
+        <p>{pageCopy.ticketsText}</p>
+      </div>
+
+      {status === 'loading' ? <p className="notice">{pageCopy.loading}</p> : null}
+      {status === 'error' ? <p className="notice error">{message}</p> : null}
+
+      {status === 'success' && registrations.length === 0 ? (
+        <section className="empty-state tickets-empty">
+          <span className="eyebrow">{pageCopy.ticketsEyebrow}</span>
+          <h1>{pageCopy.emptyTitle}</h1>
+          <p>{pageCopy.emptyText}</p>
+          <Link to="/discover" className="primary-button">
+            {pageCopy.openDiscover}
+          </Link>
+        </section>
+      ) : null}
+
+      {registrations.length > 0 ? (
+        <div className="ticket-grid">
+          {registrations.map((registration) => (
+            <article key={registration.id} className="ticket-card">
+              <img
+                src={getEventPosterUrl(registration.event)}
+                alt={`${registration.event.title} poster`}
+                className="ticket-poster"
+              />
+              <div className="ticket-copy">
+                <div className="ticket-topline">
+                  <span
+                    className={`pill ticket-status ${
+                      registration.status === 'confirmed'
+                        ? 'ticket-status-confirmed'
+                        : 'ticket-status-pending'
+                    }`}
+                  >
+                    {registration.status === 'confirmed'
+                      ? pageCopy.statusConfirmed
+                      : pageCopy.statusPending}
+                  </span>
+                  <span className="pill">{translateCategory(registration.event.category)}</span>
+                </div>
+
+                <h3>{registration.event.title}</h3>
+                <p>
+                  {registration.event.city} /{' '}
+                  {formatEventDate(registration.event.startsAt, locale)}
+                </p>
+                <div className="ticket-meta-row">
+                  <span className="ticket-price">
+                    {formatPrice(
+                      registration.amountTotal || registration.event.price,
+                      locale,
+                      copy.common.free,
+                    )}
+                  </span>
+                </div>
+                <Link
+                  to={`/events/${registration.eventId}`}
+                  className="inline-link ticket-open-link"
+                >
+                  {pageCopy.openEvent}
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {settingsOpen ? (
+        <div
+          className="account-modal-backdrop"
+          onClick={() => {
+            setSettingsOpen(false);
+            resetModalFeedback();
+          }}
+        >
+          <div
+            className="account-modal"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={pageCopy.settingsTitle}
+          >
+            <aside className="account-modal-nav">
+              <span className="eyebrow">{pageCopy.tabsTitle}</span>
+              <button
+                type="button"
+                className={`account-modal-tab ${activeSettingsTab === 'profile' ? 'active' : ''}`}
+                onClick={() => setActiveSettingsTab('profile')}
+              >
+                {pageCopy.profileTab}
+              </button>
+              <button
+                type="button"
+                className={`account-modal-tab ${activeSettingsTab === 'email' ? 'active' : ''}`}
+                onClick={() => setActiveSettingsTab('email')}
+              >
+                {pageCopy.emailTab}
+              </button>
+              <button
+                type="button"
+                className={`account-modal-tab ${
+                  activeSettingsTab === 'password' ? 'active' : ''
+                }`}
+                onClick={() => setActiveSettingsTab('password')}
+              >
+                {pageCopy.passwordTab}
+              </button>
+              <button
+                type="button"
+                className={`account-modal-tab ${
+                  activeSettingsTab === 'recovery' ? 'active' : ''
+                }`}
+                onClick={() => setActiveSettingsTab('recovery')}
+              >
+                {pageCopy.recoveryTab}
+              </button>
+            </aside>
+
+            <div className="account-modal-panel">
+              <button
+                type="button"
+                className="account-modal-close"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  resetModalFeedback();
+                }}
+                aria-label={pageCopy.settingsClose}
+              >
+                x
+              </button>
+
+              {activeSettingsTab === 'profile' ? (
+                <form
+                  className="account-settings-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    setSettingsStatus('saving');
+                    setSettingsMessage('');
+
+                    try {
+                      const interests = settingsInterests
+                        .split(',')
+                        .map((item) => item.trim())
+                        .filter(Boolean);
+
+                      await updateProfile({
+                        displayName: settingsName.trim(),
+                        interests,
+                      });
+
+                      setSettingsStatus('idle');
+                      setSettingsMessage(pageCopy.settingsSaved);
+                    } catch (error) {
+                      setSettingsStatus('error');
+                      setSettingsMessage(
+                        error instanceof Error ? error.message : pageCopy.failedProfile,
+                      );
+                    }
+                  }}
+                >
+                  <div className="account-settings-copy">
+                    <h3>{pageCopy.modalProfileTitle}</h3>
+                    <p>{pageCopy.modalProfileText}</p>
+                  </div>
+
+                  <label className="field">
+                    <span>{pageCopy.displayName}</span>
+                    <input
+                      value={settingsName}
+                      onChange={(event) => setSettingsName(event.target.value)}
+                      placeholder={pageCopy.displayName}
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span>{pageCopy.interestsLabel}</span>
+                    <input
+                      value={settingsInterests}
+                      onChange={(event) => setSettingsInterests(event.target.value)}
+                      placeholder={pageCopy.interestsHint}
+                    />
+                  </label>
+
+                  {settingsMessage ? (
+                    <p className={`notice ${settingsStatus === 'error' ? 'error' : 'success'}`}>
+                      {settingsMessage}
+                    </p>
+                  ) : null}
+
+                  <div className="form-actions">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={settingsStatus === 'saving'}
+                    >
+                      {settingsStatus === 'saving'
+                        ? pageCopy.savingSettings
+                        : pageCopy.saveSettings}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {activeSettingsTab === 'email' ? (
+                <form
+                  className="account-settings-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    setEmailStatus('saving');
+                    setEmailMessage('');
+
+                    try {
+                      await changeEmail({
+                        newEmail: newEmail.trim(),
+                        password: emailPassword,
+                      });
+
+                      setEmailPassword('');
+                      setEmailStatus('idle');
+                      setEmailMessage(pageCopy.emailSaved);
+                    } catch (error) {
+                      setEmailStatus('error');
+                      setEmailMessage(
+                        error instanceof Error ? error.message : pageCopy.failedEmail,
+                      );
+                    }
+                  }}
+                >
+                  <div className="account-settings-copy">
+                    <h3>{pageCopy.changeEmailTitle}</h3>
+                    <p>{pageCopy.changeEmailText}</p>
+                  </div>
+
+                  <label className="field">
+                    <span>{pageCopy.newEmailLabel}</span>
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(event) => setNewEmail(event.target.value)}
+                      placeholder="name@example.com"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span>{pageCopy.currentPasswordLabel}</span>
+                    <input
+                      type="password"
+                      value={emailPassword}
+                      onChange={(event) => setEmailPassword(event.target.value)}
+                      placeholder="********"
+                    />
+                  </label>
+
+                  {emailMessage ? (
+                    <p className={`notice ${emailStatus === 'error' ? 'error' : 'success'}`}>
+                      {emailMessage}
+                    </p>
+                  ) : null}
+
+                  <div className="form-actions">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={emailStatus === 'saving'}
+                    >
+                      {emailStatus === 'saving' ? pageCopy.savingEmail : pageCopy.saveEmail}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {activeSettingsTab === 'password' ? (
+                <form
+                  className="account-settings-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    setPasswordStatus('saving');
+                    setPasswordMessage('');
+
+                    try {
+                      const responseMessage = await changePassword({
+                        currentPassword,
+                        newPassword: nextPassword,
+                        confirmPassword,
+                      });
+
+                      setCurrentPassword('');
+                      setNextPassword('');
+                      setConfirmPassword('');
+                      setPasswordStatus('idle');
+                      setPasswordMessage(responseMessage || pageCopy.passwordSaved);
+                    } catch (error) {
+                      setPasswordStatus('error');
+                      setPasswordMessage(
+                        error instanceof Error ? error.message : pageCopy.failedPassword,
+                      );
+                    }
+                  }}
+                >
+                  <div className="account-settings-copy">
+                    <h3>{pageCopy.passwordTitle}</h3>
+                    <p>{pageCopy.passwordText}</p>
+                  </div>
+
+                  <label className="field">
+                    <span>{pageCopy.passwordCurrent}</span>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(event) => setCurrentPassword(event.target.value)}
+                      placeholder="********"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span>{pageCopy.passwordNew}</span>
+                    <input
+                      type="password"
+                      value={nextPassword}
+                      onChange={(event) => setNextPassword(event.target.value)}
+                      placeholder="********"
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span>{pageCopy.passwordRepeat}</span>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="********"
+                    />
+                  </label>
+
+                  {passwordMessage ? (
+                    <p
+                      className={`notice ${
+                        passwordStatus === 'error' ? 'error' : 'success'
+                      }`}
+                    >
+                      {passwordMessage}
+                    </p>
+                  ) : null}
+
+                  <div className="form-actions">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={passwordStatus === 'saving'}
+                    >
+                      {passwordStatus === 'saving'
+                        ? pageCopy.savingPassword
+                        : pageCopy.savePassword}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {activeSettingsTab === 'recovery' ? (
+                <div className="account-settings-form">
+                  <div className="account-settings-copy">
+                    <h3>{pageCopy.recoveryTitle}</h3>
+                    <p>{pageCopy.recoveryText}</p>
+                  </div>
+
+                  <label className="field">
+                    <span>{pageCopy.emailLabel}</span>
+                    <input value={user.email} disabled />
+                  </label>
+
+                  <p className="notice">{pageCopy.recoveryHint}</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}

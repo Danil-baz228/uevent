@@ -10,13 +10,18 @@ import {
 import {
   AuthResponse,
   AuthUser,
+  ChangeEmailPayload,
+  ChangePasswordPayload,
   LoginPayload,
   RegisterPayload,
+  changeEmail as changeEmailRequest,
+  changePassword as changePasswordRequest,
   fetchCurrentUser,
   login as loginRequest,
   logoutSession,
   refreshSession,
   register as registerRequest,
+  updateCurrentUser as updateCurrentUserRequest,
 } from '../lib/api';
 
 type AuthContextValue = {
@@ -26,6 +31,12 @@ type AuthContextValue = {
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
+  updateProfile: (payload: {
+    displayName?: string;
+    interests?: string[];
+  }) => Promise<void>;
+  changeEmail: (payload: ChangeEmailPayload) => Promise<void>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<string>;
 };
 
 type StoredSession = {
@@ -159,6 +170,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  async function updateProfile(payload: {
+    displayName?: string;
+    interests?: string[];
+  }) {
+    const stored = readStoredSession();
+
+    if (!stored?.token) {
+      throw new Error('No active session');
+    }
+
+    const nextUser = await updateCurrentUserRequest(payload, stored.token);
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        token: stored.token,
+        refreshToken: stored.refreshToken,
+        user: nextUser,
+      }),
+    );
+
+    setUser(nextUser);
+  }
+
+  async function changeEmail(payload: ChangeEmailPayload) {
+    const stored = readStoredSession();
+
+    if (!stored?.token) {
+      throw new Error('No active session');
+    }
+
+    const nextSession = await changeEmailRequest(payload, stored.token);
+    const persistedSession = persistSession(nextSession);
+
+    setToken(persistedSession.token);
+    setUser(persistedSession.user);
+  }
+
+  async function changePassword(payload: ChangePasswordPayload) {
+    const stored = readStoredSession();
+
+    if (!stored?.token) {
+      throw new Error('No active session');
+    }
+
+    const response = await changePasswordRequest(payload, stored.token);
+    return response.message;
+  }
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -167,6 +227,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: (payload) => handleAuthResponse(loginRequest(payload)),
       register: (payload) => handleAuthResponse(registerRequest(payload)),
       logout,
+      updateProfile,
+      changeEmail,
+      changePassword,
     }),
     [isReady, token, user],
   );

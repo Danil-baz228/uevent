@@ -151,13 +151,40 @@ export type RegisterPayload = {
   password: string;
 };
 
+export type UpdateCurrentUserPayload = {
+  displayName?: string;
+  interests?: string[];
+};
+
 export type RefreshTokenPayload = {
   refreshToken: string;
+};
+
+export type ChangeEmailPayload = {
+  newEmail: string;
+  password: string;
+};
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 };
 
 export type CreateCommentPayload = {
   content: string;
   parentCommentId?: string;
+};
+
+export type ApiNotification = {
+  id: string;
+  userId: string;
+  eventId: string | null;
+  type: 'registration_confirmed' | 'payment_confirmed' | 'new_attendee' | 'new_comment';
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
 };
 
 type RequestOptions = RequestInit & {
@@ -361,9 +388,63 @@ export function logoutSession(payload: RefreshTokenPayload) {
   });
 }
 
+export function changeEmail(payload: ChangeEmailPayload, token: string) {
+  return requestJson<AuthResponse>('/auth/change-email', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function changePassword(payload: ChangePasswordPayload, token: string) {
+  return requestJson<{ message: string }>('/auth/change-password', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
 export function fetchCurrentUser(token: string) {
   return requestJson<AuthUser>('/users/me', {
     token,
+  });
+}
+
+export function fetchMyNotifications(token: string) {
+  return requestJson<ApiNotification[]>('/notifications/me', {
+    token,
+  });
+}
+
+export function markNotificationAsRead(notificationId: string, token: string) {
+  return requestJson<ApiNotification>(`/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export function markAllNotificationsAsRead(token: string) {
+  return requestJson<{ message: string }>('/notifications/read-all', {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export function clearAllNotifications(token: string) {
+  return requestJson<{ message: string }>('/notifications/clear-all', {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function updateCurrentUser(
+  payload: UpdateCurrentUserPayload,
+  token: string,
+) {
+  return requestJson<AuthUser>('/users/me', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(payload),
   });
 }
 
@@ -395,14 +476,75 @@ export function getEventPosterUrl(event: Pick<ApiEvent, 'posterUrl' | 'title' | 
     return `${API_ORIGIN}${event.posterUrl}`;
   }
 
+  const truncateText = (value: string, limit: number) =>
+    value.length > limit ? `${value.slice(0, limit - 1).trimEnd()}…` : value;
+
+  const wrapTitle = (value: string, maxLines: number, maxCharsPerLine: number) => {
+    const words = value.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+
+      if (candidate.length <= maxCharsPerLine) {
+        currentLine = candidate;
+        continue;
+      }
+
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        lines.push(truncateText(word, maxCharsPerLine));
+        currentLine = '';
+      }
+
+      if (lines.length === maxLines) {
+        return lines.map((line, index) =>
+          index === maxLines - 1 ? truncateText(line, maxCharsPerLine) : line,
+        );
+      }
+    }
+
+    if (currentLine && lines.length < maxLines) {
+      lines.push(currentLine);
+    }
+
+    if (lines.length > maxLines) {
+      return lines.slice(0, maxLines).map((line, index) =>
+        index === maxLines - 1 ? truncateText(line, maxCharsPerLine) : line,
+      );
+    }
+
+    if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) {
+      lines[maxLines - 1] = truncateText(lines[maxLines - 1], maxCharsPerLine);
+    }
+
+    return lines;
+  };
+
   const title = event.title
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-  const category = event.category
+  const category = truncateText(event.category, 18)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+  const titleLines = wrapTitle(event.title, 2, 26).map(
+    (line) =>
+      line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;'),
+  );
+  const titleText = titleLines
+    .map(
+      (line, index) =>
+        `<tspan x="70" dy="${index === 0 ? 0 : 76}">${line}</tspan>`,
+    )
+    .join('');
 
   return `data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
@@ -417,7 +559,7 @@ export function getEventPosterUrl(event: Pick<ApiEvent, 'posterUrl' | 'title' | 
       <circle cx="1030" cy="120" r="120" fill="#ffd29b" opacity="0.55"/>
       <circle cx="180" cy="560" r="170" fill="#8fd0c5" opacity="0.2"/>
       <text x="70" y="110" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#c4572d">${category}</text>
-      <text x="70" y="250" font-family="Segoe UI, sans-serif" font-size="64" font-weight="700" fill="#172033">${title}</text>
+      <text x="70" y="250" font-family="Segoe UI, sans-serif" font-size="64" font-weight="700" fill="#172033">${titleText}</text>
       <text x="70" y="600" font-family="Segoe UI, sans-serif" font-size="28" fill="#445066">Uevent poster</text>
     </svg>`,
   )}`;

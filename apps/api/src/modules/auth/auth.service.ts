@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Optional,
@@ -7,6 +8,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { ChangeEmailDto } from './dto/change-email.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -253,6 +256,118 @@ export class AuthService {
     }
 
     return { message: 'Logout completed' };
+  }
+
+  async changeEmail(userId: string, dto: ChangeEmailDto) {
+    const normalizedEmail = dto.newEmail.toLowerCase().trim();
+
+    if (!this.usersRepository) {
+      const user = this.inMemoryData.findUserById(userId);
+
+      if (!user || !verifyPassword(dto.password, user.passwordHash)) {
+        throw new UnauthorizedException('Invalid password');
+      }
+
+      const existingUser = this.inMemoryData.findUserByEmail(normalizedEmail);
+
+      if (existingUser && existingUser.id !== user.id) {
+        throw new ConflictException('User with this email already exists');
+      }
+
+      const refreshToken = createRefreshToken({
+        sub: user.id,
+        email: normalizedEmail,
+      });
+
+      this.inMemoryData.updateUser(user.id, {
+        email: normalizedEmail,
+        refreshTokenHash: hashToken(refreshToken),
+      });
+
+      const updatedUser = this.inMemoryData.findUserById(user.id);
+
+      if (!updatedUser) {
+        throw new UnauthorizedException('User was not found');
+      }
+
+      return {
+        message: 'Email updated',
+        accessToken: createAccessToken({
+          sub: updatedUser.id,
+          email: updatedUser.email,
+        }),
+        refreshToken,
+        user: this.serializeUser(updatedUser),
+      };
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user || !verifyPassword(dto.password, user.passwordHash)) {
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingUser && existingUser.id !== user.id) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    user.email = normalizedEmail;
+    const refreshToken = createRefreshToken({
+      sub: user.id,
+      email: normalizedEmail,
+    });
+    user.refreshTokenHash = hashToken(refreshToken);
+
+    const savedUser = await this.usersRepository.save(user);
+
+    return {
+      message: 'Email updated',
+      accessToken: createAccessToken({
+        sub: savedUser.id,
+        email: savedUser.email,
+      }),
+      refreshToken,
+      user: this.serializeUser(savedUser),
+    };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('Password confirmation does not match');
+    }
+
+    if (!this.usersRepository) {
+      const user = this.inMemoryData.findUserById(userId);
+
+      if (!user || !verifyPassword(dto.currentPassword, user.passwordHash)) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+
+      this.inMemoryData.updateUser(user.id, {
+        passwordHash: hashPassword(dto.newPassword),
+      });
+
+      return { message: 'Password updated' };
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user || !verifyPassword(dto.currentPassword, user.passwordHash)) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    user.passwordHash = hashPassword(dto.newPassword);
+    await this.usersRepository.save(user);
+
+    return { message: 'Password updated' };
   }
 
   private serializeUser(user: UserEntity) {

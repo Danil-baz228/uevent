@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } f
 
 import { EventCommentEntity } from '../../comments/entities/event-comment.entity';
 import { EventEntity } from '../../events/entities/event.entity';
+import { NotificationEntity } from '../../notifications/entities/notification.entity';
 import { EventRegistrationEntity } from '../../registrations/entities/event-registration.entity';
 
 @Entity({ name: 'users' })
@@ -35,4 +36,7 @@ export class UserEntity {
 
   @OneToMany(() => EventCommentEntity, (comment) => comment.author)
   comments!: EventCommentEntity[];
+
+  @OneToMany(() => NotificationEntity, (notification) => notification.user)
+  notifications!: NotificationEntity[];
 }

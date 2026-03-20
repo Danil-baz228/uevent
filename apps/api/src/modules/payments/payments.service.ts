@@ -9,7 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 import { isDatabaseEnabled } from '../../config/database-mode';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RegistrationsService } from '../registrations/registrations.service';
+import { UsersService } from '../users/users.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 
 @Injectable()
@@ -22,6 +24,8 @@ export class PaymentsService {
 
   constructor(
     private readonly registrationsService: RegistrationsService,
+    private readonly notificationsService: NotificationsService,
+    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {
     this.useMockCheckout = !isDatabaseEnabled;
@@ -133,17 +137,28 @@ export class PaymentsService {
       sessionId,
       userId,
     );
+    const attendee = await this.usersService.getCurrentUser(userId);
 
     if (this.useMockCheckout) {
       await this.registrationsService.markStripePaymentStatus(
         registration.id,
         'paid',
       );
-
-      return this.registrationsService.confirmStripeRegistration(
+      const confirmedRegistration = await this.registrationsService.confirmStripeRegistration(
         registration,
         'paid',
       );
+      await this.notificationsService.notifyPaymentConfirmed(
+        userId,
+        registration.event,
+      );
+      await this.notificationsService.notifyNewAttendee(
+        registration.event.organizer?.id ?? registration.event.organizerId ?? null,
+        registration.event,
+        attendee.displayName,
+        userId,
+      );
+      return confirmedRegistration;
     }
 
     if (!this.stripe) {
@@ -165,9 +180,17 @@ export class PaymentsService {
       throw new BadRequestException('Payment is not completed yet');
     }
 
-    return this.registrationsService.confirmStripeRegistration(
+    const confirmedRegistration = await this.registrationsService.confirmStripeRegistration(
       registration,
       session.payment_status,
     );
+    await this.notificationsService.notifyPaymentConfirmed(userId, registration.event);
+    await this.notificationsService.notifyNewAttendee(
+      registration.event.organizer?.id ?? registration.event.organizerId ?? null,
+      registration.event,
+      attendee.displayName,
+      userId,
+    );
+    return confirmedRegistration;
   }
 }

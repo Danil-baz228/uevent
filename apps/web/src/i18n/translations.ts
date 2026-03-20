@@ -210,6 +210,19 @@ export type TranslationDictionary = {
     text: string;
     tryAgain: string;
   };
+  tickets: {
+    eyebrow: string;
+    title: string;
+    text: string;
+    loading: string;
+    signInNotice: string;
+    signInCta: string;
+    emptyTitle: string;
+    emptyText: string;
+    openEvent: string;
+    statusConfirmed: string;
+    statusPending: string;
+  };
   notFound: {
     eyebrow: string;
     title: string;
@@ -455,6 +468,19 @@ export const translations: Record<Language, TranslationDictionary> = {
       text: 'You can return to the catalogue and restart checkout for any paid event.',
       tryAgain: 'Try again',
     },
+    tickets: {
+      eyebrow: 'My tickets',
+      title: 'All your registrations in one place',
+      text: 'Track confirmed tickets, pending payments, and jump back into any event page without digging through discover.',
+      loading: 'Loading your tickets...',
+      signInNotice: 'Please sign in to view your tickets.',
+      signInCta: 'Go to login',
+      emptyTitle: 'No tickets yet',
+      emptyText: 'Register for a free event or buy a paid ticket to start building your personal event collection.',
+      openEvent: 'Open event',
+      statusConfirmed: 'Confirmed',
+      statusPending: 'Payment pending',
+    },
     notFound: {
       eyebrow: '404',
       title: 'That page is not here yet.',
@@ -680,6 +706,19 @@ export const translations: Record<Language, TranslationDictionary> = {
       title: 'Checkout було скасовано до оплати.',
       text: 'Поверніться до каталогу та запустіть оплату ще раз для будь-якої платної події.',
       tryAgain: 'Спробувати ще раз',
+    },
+    tickets: {
+      eyebrow: 'My tickets',
+      title: 'All your registrations in one place',
+      text: 'Track confirmed tickets, pending payments, and jump back into any event page without digging through discover.',
+      loading: 'Loading your tickets...',
+      signInNotice: 'Please sign in to view your tickets.',
+      signInCta: 'Go to login',
+      emptyTitle: 'No tickets yet',
+      emptyText: 'Register for a free event or buy a paid ticket to start building your personal event collection.',
+      openEvent: 'Open event',
+      statusConfirmed: 'Confirmed',
+      statusPending: 'Payment pending',
     },
     notFound: {
       eyebrow: '404',

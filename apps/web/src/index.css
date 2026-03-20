@@ -76,6 +76,8 @@
   --reply-border: rgba(84, 104, 255, 0.22);
   --reply-target-color: var(--brand-indigo);
   --footer-border: rgba(255, 255, 255, 0.42);
+  --pricing-card-background: rgba(255, 255, 255, 0.6);
+  --pricing-card-border: rgba(20, 32, 51, 0.1);
 }
 
 :root[data-theme="dark"] {
@@ -146,6 +148,8 @@
   --reply-border: rgba(84, 104, 255, 0.28);
   --reply-target-color: #8ea2ff;
   --footer-border: rgba(151, 167, 255, 0.12);
+  --pricing-card-background: rgba(255, 255, 255, 0.14);
+  --pricing-card-border: rgba(255, 255, 255, 0.16);
 }
 
 * {
@@ -259,10 +263,12 @@ img {
 }
 
 .app-header {
+  z-index: 40;
   padding: 4px 0 28px;
 }
 
 .header-panel {
+  position: relative;
   display: grid;
   gap: 18px;
   padding: 18px 22px;
@@ -421,6 +427,238 @@ img {
 .header-actions {
   align-items: center;
   flex-wrap: wrap;
+}
+
+.notifications-shell {
+  position: relative;
+  z-index: 80;
+}
+
+.notification-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--chip-background);
+  cursor: pointer;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+
+.notification-button:hover,
+.notification-button.active {
+  transform: translateY(-1px);
+  border-color: var(--chip-hover-border);
+}
+
+.notification-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+}
+
+.notification-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand-coral), var(--brand-plum));
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(84, 104, 255, 0.22);
+}
+
+.notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(360px, 86vw);
+  padding: 16px;
+  border: 1px solid var(--surface-border);
+  border-radius: 22px;
+  background: var(--surface-background);
+  box-shadow: var(--shadow-strong);
+  backdrop-filter: blur(18px);
+  z-index: 120;
+}
+
+.notifications-dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.notifications-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notifications-mark-all {
+  color: var(--brand-indigo);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.notifications-clear-all {
+  color: var(--danger-color);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.notifications-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notifications-view-all {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--chip-background);
+  color: var(--ink-900);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.notification-item {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: var(--chip-background);
+  cursor: pointer;
+}
+
+.notification-item:focus-visible {
+  outline: none;
+  border-color: rgba(84, 104, 255, 0.32);
+  box-shadow: 0 0 0 4px rgba(84, 104, 255, 0.12);
+}
+
+.notification-item.unread {
+  border-color: rgba(84, 104, 255, 0.24);
+  background: linear-gradient(135deg, rgba(84, 104, 255, 0.08), rgba(255, 255, 255, 0.7));
+}
+
+.notification-item p,
+.notifications-empty {
+  margin: 0;
+  color: var(--ink-700);
+}
+
+.notification-open {
+  width: fit-content;
+  margin-top: 2px;
+  padding: 0;
+  background: transparent;
+  color: var(--brand-indigo);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.notifications-footer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.notifications-mark-all.footer,
+.notifications-clear-all.footer {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--chip-background);
+}
+
+.notifications-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 16, 30, 0.56);
+  backdrop-filter: blur(14px);
+}
+
+.notifications-modal {
+  width: min(720px, 100%);
+  max-height: min(78vh, 820px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--surface-border);
+  border-radius: 28px;
+  background: var(--surface-background);
+  box-shadow: var(--shadow-strong);
+}
+
+.notifications-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.notifications-modal-close {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--chip-background);
+  color: var(--ink-900);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.notifications-modal-body {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.notifications-modal-list {
+  display: grid;
+  gap: 12px;
 }
 
 .user-chip {
@@ -583,7 +821,7 @@ img {
 .event-card,
 .spotlight article,
 .mini-event-card {
-  padding: 20px;
+  padding: 18px;
 }
 
 .metric-card strong,
@@ -627,7 +865,44 @@ img {
 
 .mini-event-card {
   display: grid;
-  gap: 10px;
+  align-content: start;
+  gap: 8px;
+}
+
+.mini-event-poster {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border: 1px solid var(--media-border);
+  border-radius: 20px;
+  box-shadow: var(--media-shadow);
+}
+
+.mini-event-pill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-event-title {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.18;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.mini-event-meta {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.mini-event-link {
+  margin-top: 2px;
+  font-size: 0.92rem;
 }
 
 .placeholder-spark {
@@ -712,6 +987,13 @@ img {
   line-height: 1.08;
 }
 
+.event-card h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .inline-link,
 .event-link,
 .event-detail-link {
@@ -730,7 +1012,7 @@ img {
 .list-card-meta {
   justify-content: space-between;
   align-items: center;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .discover-toolbar {
@@ -883,18 +1165,52 @@ img {
   flex: 1;
 }
 
+.list-card-copy {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.list-card-topline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .list-card-meta {
+  display: grid;
   flex-direction: column;
-  align-items: flex-end;
-  min-width: 150px;
+  align-content: center;
+  justify-items: stretch;
+  gap: 12px;
+  min-width: 180px;
+}
+
+.list-card-pricing {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--pricing-card-border);
+  border-radius: 20px;
+  background: var(--pricing-card-background);
+  backdrop-filter: blur(12px);
+}
+
+.list-card-pricing strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .status-pill {
-  min-width: 150px;
+  min-width: 180px;
 }
 
 .pay-button {
-  min-width: 170px;
+  width: 100%;
+  min-width: 180px;
 }
 
 .event-poster-thumb,
@@ -956,6 +1272,317 @@ img {
 
 .details-sidebar .form-card {
   gap: 14px;
+}
+
+.ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.account-overview {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.account-profile-card,
+.account-stat-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+  border-radius: 30px;
+  background: var(--surface-background);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
+}
+
+.account-profile-card {
+  padding: 24px;
+}
+
+.account-panel-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.account-settings-button {
+  min-height: 42px;
+  padding: 0 16px;
+}
+
+.account-settings-button.active {
+  color: white;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--brand-indigo), var(--brand-plum));
+  box-shadow: 0 14px 28px rgba(84, 104, 255, 0.2);
+}
+
+.account-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 12px 0 18px;
+}
+
+.account-avatar {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--brand-coral), var(--brand-indigo));
+  color: white;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  box-shadow: 0 18px 32px rgba(84, 104, 255, 0.2);
+}
+
+.account-profile-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.account-profile-copy h2,
+.account-tickets-header h2 {
+  margin: 0;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.account-profile-copy p,
+.account-tickets-header p {
+  margin: 0;
+}
+
+.account-profile-grid,
+.account-stats-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.account-profile-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-profile-item {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 22px;
+  background: var(--chip-background);
+}
+
+.account-profile-item span,
+.account-stat-card span {
+  color: var(--ink-700);
+  font-size: 0.92rem;
+}
+
+.account-profile-item strong,
+.account-stat-card strong {
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  font-size: 1.15rem;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.account-stats-grid {
+  grid-template-columns: 1fr;
+}
+
+.account-stat-card {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  min-height: 110px;
+  padding: 20px 22px;
+}
+
+.account-tickets-header {
+  margin-top: 6px;
+}
+
+.account-settings-form {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.account-settings-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.account-settings-copy h3 {
+  margin: 0;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.account-settings-copy p {
+  margin: 0;
+  color: var(--ink-700);
+}
+
+.account-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 16, 30, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.account-modal {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  width: min(980px, 100%);
+  min-height: 620px;
+  border: 1px solid var(--surface-border);
+  border-radius: 32px;
+  background: var(--surface-background);
+  box-shadow: var(--shadow-strong);
+  overflow: hidden;
+}
+
+.account-modal-nav {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 28px 20px;
+  border-right: 1px solid var(--line-soft);
+  background: rgba(12, 18, 32, 0.06);
+}
+
+.account-modal-tab {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink-900);
+  cursor: pointer;
+  transition:
+    background 0.22s ease,
+    border-color 0.22s ease,
+    transform 0.22s ease;
+}
+
+.account-modal-tab:hover {
+  transform: translateX(2px);
+  background: rgba(84, 104, 255, 0.08);
+}
+
+.account-modal-tab.active {
+  border-color: rgba(84, 104, 255, 0.24);
+  background: linear-gradient(135deg, rgba(84, 104, 255, 0.18), rgba(116, 86, 223, 0.14));
+}
+
+.account-modal-panel {
+  position: relative;
+  display: grid;
+  align-content: start;
+  padding: 28px;
+}
+
+.account-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--chip-background);
+  color: var(--ink-900);
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.ticket-card {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--surface-border);
+  border-radius: 28px;
+  background: var(--surface-background);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
+}
+
+.ticket-poster {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  min-height: unset;
+  max-height: unset;
+  object-fit: cover;
+  border: 1px solid var(--media-border);
+  border-radius: 22px;
+  box-shadow: var(--media-shadow);
+}
+
+.ticket-copy {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.ticket-copy h3 {
+  margin: 0;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 1.38rem;
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ticket-topline,
+.ticket-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ticket-price {
+  font-weight: 700;
+}
+
+.ticket-status {
+  font-weight: 800;
+}
+
+.ticket-status-confirmed {
+  border-color: rgba(78, 196, 177, 0.28);
+  background: rgba(226, 255, 247, 0.76);
+}
+
+.ticket-status-pending {
+  border-color: rgba(255, 184, 107, 0.24);
+  background: rgba(255, 244, 228, 0.76);
+}
+
+.ticket-open-link {
+  margin-top: 4px;
+}
+
+.tickets-empty {
+  margin-top: 20px;
 }
 
 .organizer-settings-card {
@@ -1171,7 +1798,8 @@ img {
   .header-topline,
   .app-footer,
   .list-card,
-  .settings-header {
+  .settings-header,
+  .account-panel-topline {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -1192,16 +1820,44 @@ img {
 
   .list-card-meta {
     align-items: flex-start;
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .list-card-pricing {
+    justify-items: center;
   }
 
   .settings-toggle-grid,
-  .hero-mini-grid {
+  .hero-mini-grid,
+  .ticket-grid,
+  .account-overview,
+  .account-profile-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ticket-card {
+    grid-template-columns: 1fr;
+  }
+
+  .account-profile-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .section-header-wide {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .account-modal {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .account-modal-nav {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
   }
 }
 

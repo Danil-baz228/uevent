@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 
 import { EventCommentEntity } from '../modules/comments/entities/event-comment.entity';
 import { EventEntity } from '../modules/events/entities/event.entity';
+import { NotificationEntity } from '../modules/notifications/entities/notification.entity';
 import { EventRegistrationEntity } from '../modules/registrations/entities/event-registration.entity';
 import { UserEntity } from '../modules/users/entities/user.entity';
 import { InitialSchema1760000000000 } from './migrations/1760000000000-InitialSchema';
@@ -12,6 +13,7 @@ import { AddEventComments1760000000002 } from './migrations/1760000000002-AddEve
 import { AddCommentReplies1760000000003 } from './migrations/1760000000003-AddCommentReplies';
 import { AddPosterUrlToEvents1760000000004 } from './migrations/1760000000004-AddPosterUrlToEvents';
 import { AddEventSettings1760000000005 } from './migrations/1760000000005-AddEventSettings';
+import { AddNotifications1760000000006 } from './migrations/1760000000006-AddNotifications';
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -20,7 +22,13 @@ const dataSource = new DataSource({
   username: process.env.DATABASE_USER ?? 'postgres',
   password: process.env.DATABASE_PASSWORD ?? 'postgres',
   database: process.env.DATABASE_NAME ?? 'uevent',
-  entities: [UserEntity, EventEntity, EventRegistrationEntity, EventCommentEntity],
+  entities: [
+    UserEntity,
+    EventEntity,
+    EventRegistrationEntity,
+    EventCommentEntity,
+    NotificationEntity,
+  ],
   migrations: [
     InitialSchema1760000000000,
     AddRefreshTokenHashToUsers1760000000001,
@@ -28,6 +36,7 @@ const dataSource = new DataSource({
     AddCommentReplies1760000000003,
     AddPosterUrlToEvents1760000000004,
     AddEventSettings1760000000005,
+    AddNotifications1760000000006,
   ],
   synchronize: false,
 });

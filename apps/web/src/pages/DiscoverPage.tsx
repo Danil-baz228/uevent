@@ -219,8 +219,10 @@ export function DiscoverPage() {
                 alt={`${event.title} poster`}
                 className="event-poster-thumb"
               />
-              <div>
-                <span className="pill">{translateCategory(event.category)}</span>
+              <div className="list-card-copy">
+                <div className="list-card-topline">
+                  <span className="pill">{translateCategory(event.category)}</span>
+                </div>
                 <h3>
                   <Link to={`/events/${event.id}`} className="event-link">
                     {event.title}
@@ -240,8 +242,10 @@ export function DiscoverPage() {
             </div>
 
             <div className="list-card-meta">
-              <strong>{formatPrice(event.price, locale, copy.common.free)}</strong>
-              <span>{event.capacity} {copy.common.spots}</span>
+              <div className="list-card-pricing">
+                <strong>{formatPrice(event.price, locale, copy.common.free)}</strong>
+                <span>{event.capacity} {copy.common.spots}</span>
+              </div>
               {getRegistration(event.id)?.status === 'confirmed' ? (
                 <span className="pill status-pill">{copy.common.registered}</span>
               ) : getRegistration(event.id)?.status === 'pending_payment' ? (

@@ -121,11 +121,19 @@ export function HomePage() {
           <div className="hero-mini-grid">
             {featuredEvents.slice(1).map((event, index) => (
               <article key={event.id} className={`mini-event-card ${palette[index % palette.length]}`}>
-                <span className="pill">{translateCategory(event.category)}</span>
-                <strong>{event.title}</strong>
-                <span className="muted">
+                <img
+                  src={getEventPosterUrl(event)}
+                  alt={`${event.title} poster`}
+                  className="mini-event-poster"
+                />
+                <span className="pill mini-event-pill">{translateCategory(event.category)}</span>
+                <strong className="mini-event-title">{event.title}</strong>
+                <span className="muted mini-event-meta">
                   {event.city} / {formatEventDate(event.startsAt, locale)}
                 </span>
+                <Link to={`/events/${event.id}`} className="inline-link mini-event-link">
+                  {copy.discover.openEventDetails}
+                </Link>
               </article>
             ))}
           </div>

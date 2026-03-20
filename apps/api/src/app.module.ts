@@ -14,6 +14,8 @@ import { EventEntity } from './modules/events/entities/event.entity';
 import { EventsModule } from './modules/events/events.module';
 import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { NotificationEntity } from './modules/notifications/entities/notification.entity';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { EventRegistrationEntity } from './modules/registrations/entities/event-registration.entity';
 import { RegistrationsModule } from './modules/registrations/registrations.module';
 import { InMemoryDataModule } from './modules/in-memory-data/in-memory-data.module';
@@ -31,7 +33,13 @@ const databaseImports = isDatabaseEnabled
           username: configService.get<string>('DATABASE_USER'),
           password: configService.get<string>('DATABASE_PASSWORD'),
           database: configService.get<string>('DATABASE_NAME'),
-          entities: [UserEntity, EventEntity, EventRegistrationEntity, EventCommentEntity],
+          entities: [
+            UserEntity,
+            EventEntity,
+            EventRegistrationEntity,
+            EventCommentEntity,
+            NotificationEntity,
+          ],
           synchronize: false,
         }),
       }),
@@ -56,6 +64,7 @@ const seederImports = isDatabaseEnabled ? [DatabaseSeederModule] : [];
     EventsModule,
     RegistrationsModule,
     PaymentsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

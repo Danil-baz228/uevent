@@ -14,5 +14,6 @@ const databaseImports = isDatabaseEnabled
   imports: databaseImports,
   controllers: [UsersController],
   providers: [UsersService],
+  exports: [UsersService],
 })
 export class UsersModule {}

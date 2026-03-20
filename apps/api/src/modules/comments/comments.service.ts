@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventEntity } from '../events/entities/event.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UserEntity } from '../users/entities/user.entity';
 import { CreateEventCommentDto } from './dto/create-event-comment.dto';
 import { UpdateEventCommentDto } from './dto/update-event-comment.dto';
@@ -19,6 +20,7 @@ import { EventCommentEntity } from './entities/event-comment.entity';
 export class CommentsService {
   constructor(
     private readonly inMemoryData: InMemoryDataService,
+    private readonly notificationsService: NotificationsService,
     @Optional()
     @InjectRepository(EventCommentEntity)
     private readonly commentsRepository: Repository<EventCommentEntity> | undefined,
@@ -61,6 +63,13 @@ export class CommentsService {
         parentCommentId: dto.parentCommentId ?? null,
         content: dto.content.trim(),
       });
+
+      await this.notificationsService.notifyNewComment(
+        event.organizerId,
+        event,
+        author.displayName,
+        author.id,
+      );
 
       return this.serializeComment(savedComment);
     }
@@ -109,6 +118,13 @@ export class CommentsService {
     if (!comment) {
       throw new NotFoundException('Saved comment could not be loaded');
     }
+
+    await this.notificationsService.notifyNewComment(
+      event.organizerId,
+      event,
+      author.displayName,
+      author.id,
+    );
 
     return this.serializeComment(comment);
   }

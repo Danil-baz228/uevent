@@ -5,6 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { hashPassword } from '../auth/auth.utils';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
 import { EventEntity } from '../events/entities/event.entity';
+import { NotificationEntity, NotificationType } from '../notifications/entities/notification.entity';
 import {
   EventRegistrationEntity,
   PaymentProvider,
@@ -61,12 +62,24 @@ type CreateCommentInput = {
   createdAt?: Date;
 };
 
+type CreateNotificationInput = {
+  id?: string;
+  userId: string;
+  eventId?: string | null;
+  type: NotificationType;
+  title: string;
+  body: string;
+  isRead?: boolean;
+  createdAt?: Date;
+};
+
 @Injectable()
 export class InMemoryDataService {
   private readonly users: UserEntity[];
   private readonly events: EventEntity[];
   private readonly registrations: EventRegistrationEntity[];
   private readonly comments: EventCommentEntity[];
+  private readonly notifications: NotificationEntity[];
 
   constructor() {
     const organizer = this.buildUser({
@@ -154,6 +167,19 @@ export class InMemoryDataService {
         authorId: attendee.id,
         content: 'Looking forward to this one. Bringing two product friends with me.',
         createdAt: new Date('2026-03-11T08:45:00.000Z'),
+      }),
+    ];
+
+    this.notifications = [
+      this.buildNotification({
+        id: 'ntf-demo-1',
+        userId: attendee.id,
+        eventId: 'evt-product-night',
+        type: 'registration_confirmed',
+        title: 'Registration confirmed',
+        body: 'You are registered for Product Night for Curious Builders.',
+        isRead: false,
+        createdAt: new Date('2026-03-11T09:00:00.000Z'),
       }),
     ];
   }
@@ -278,6 +304,50 @@ export class InMemoryDataService {
     }
   }
 
+  listNotificationsByUser(userId: string) {
+    return this.notifications
+      .filter((notification) => notification.userId === userId)
+      .map((notification) => this.cloneNotification(notification));
+  }
+
+  findNotificationById(id: string) {
+    const notification = this.notifications.find((candidate) => candidate.id === id);
+    return notification ? this.cloneNotification(notification) : null;
+  }
+
+  createNotification(input: CreateNotificationInput) {
+    const notification = this.buildNotification(input);
+    this.notifications.push(notification);
+    return this.cloneNotification(notification);
+  }
+
+  updateNotification(id: string, update: Partial<NotificationEntity>) {
+    const notification = this.notifications.find((candidate) => candidate.id === id);
+
+    if (!notification) {
+      return null;
+    }
+
+    Object.assign(notification, update);
+    return this.cloneNotification(notification);
+  }
+
+  markAllNotificationsAsRead(userId: string) {
+    for (const notification of this.notifications) {
+      if (notification.userId === userId) {
+        notification.isRead = true;
+      }
+    }
+  }
+
+  clearAllNotifications(userId: string) {
+    for (let index = this.notifications.length - 1; index >= 0; index -= 1) {
+      if (this.notifications[index]?.userId === userId) {
+        this.notifications.splice(index, 1);
+      }
+    }
+  }
+
   listRegistrationsByUser(userId: string) {
     return this.registrations
       .filter((registration) => registration.userId === userId)
@@ -340,6 +410,7 @@ export class InMemoryDataService {
       events: [],
       registrations: [],
       comments: [],
+      notifications: [],
     };
   }
 
@@ -395,6 +466,21 @@ export class InMemoryDataService {
     };
   }
 
+  private buildNotification(input: CreateNotificationInput): NotificationEntity {
+    return {
+      id: input.id ?? `ntf-${randomUUID()}`,
+      userId: input.userId,
+      eventId: input.eventId ?? null,
+      type: input.type,
+      title: input.title,
+      body: input.body,
+      isRead: input.isRead ?? false,
+      createdAt: input.createdAt ?? new Date(),
+      user: null as never,
+      event: null,
+    };
+  }
+
   private cloneUser(user: UserEntity): UserEntity {
     return {
       ...user,
@@ -403,6 +489,16 @@ export class InMemoryDataService {
       events: [],
       registrations: [],
       comments: [],
+      notifications: [],
+    };
+  }
+
+  private cloneNotification(notification: NotificationEntity): NotificationEntity {
+    return {
+      ...notification,
+      createdAt: new Date(notification.createdAt),
+      event: notification.eventId ? (this.findEventById(notification.eventId) as EventEntity) : null,
+      user: this.findUserById(notification.userId) as UserEntity,
     };
   }
 
