@@ -35,6 +35,7 @@ type AuthContextValue = {
     displayName?: string;
     interests?: string[];
   }) => Promise<void>;
+  reloadUser: () => Promise<void>;
   changeEmail: (payload: ChangeEmailPayload) => Promise<void>;
   changePassword: (payload: ChangePasswordPayload) => Promise<string>;
 };
@@ -194,6 +195,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(nextUser);
   }
 
+  async function reloadUser() {
+    const stored = readStoredSession();
+
+    if (!stored?.token) {
+      throw new Error('No active session');
+    }
+
+    const nextUser = await fetchCurrentUser(stored.token);
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        token: stored.token,
+        refreshToken: stored.refreshToken,
+        user: nextUser,
+      }),
+    );
+
+    setUser(nextUser);
+  }
+
   async function changeEmail(payload: ChangeEmailPayload) {
     const stored = readStoredSession();
 
@@ -228,6 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register: (payload) => handleAuthResponse(registerRequest(payload)),
       logout,
       updateProfile,
+      reloadUser,
       changeEmail,
       changePassword,
     }),

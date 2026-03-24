@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { CompanyEntity } from '../companies/entities/company.entity';
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { UserEntity } from './entities/user.entity';
@@ -13,6 +14,9 @@ export class UsersService {
     @Optional()
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity> | undefined,
+    @Optional()
+    @InjectRepository(CompanyEntity)
+    private readonly companiesRepository: Repository<CompanyEntity> | undefined,
   ) {}
 
   async getCurrentUser(userId: string) {
@@ -23,30 +27,19 @@ export class UsersService {
         throw new NotFoundException('User was not found');
       }
 
-      return {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        interests: user.interests,
-        createdAt: user.createdAt,
-      };
+      return this.serializeUser(user);
     }
 
     const user = await this.usersRepository.findOne({
       where: { id: userId },
+      relations: { companies: true },
     });
 
     if (!user) {
       throw new NotFoundException('User was not found');
     }
 
-    return {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      interests: user.interests,
-      createdAt: user.createdAt,
-    };
+    return this.serializeUser(user);
   }
 
   async updateCurrentUser(userId: string, dto: UpdateCurrentUserDto) {
@@ -73,17 +66,12 @@ export class UsersService {
         throw new NotFoundException('User was not found');
       }
 
-      return {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        displayName: updatedUser.displayName,
-        interests: updatedUser.interests,
-        createdAt: updatedUser.createdAt,
-      };
+      return this.serializeUser(updatedUser);
     }
 
     const user = await this.usersRepository.findOne({
       where: { id: userId },
+      relations: { companies: true },
     });
 
     if (!user) {
@@ -95,12 +83,52 @@ export class UsersService {
 
     const savedUser = await this.usersRepository.save(user);
 
+    return this.serializeUser(savedUser);
+  }
+
+  private async serializeUser(user: UserEntity) {
+    const companies = !this.companiesRepository
+      ? this.inMemoryData.listCompaniesByOwner(user.id).map((company) => ({
+          id: company.id,
+          name: company.name,
+          email: company.email,
+          location: company.location,
+          description: company.description,
+          ownerId: company.ownerId,
+          createdAt: company.createdAt,
+        }))
+      : (user.companies ?? []).map((company) => ({
+          id: company.id,
+          name: company.name,
+          email: company.email,
+          location: company.location,
+          description: company.description,
+          ownerId: company.ownerId,
+          createdAt: company.createdAt,
+        })) ??
+        [];
+
     return {
-      id: savedUser.id,
-      email: savedUser.email,
-      displayName: savedUser.displayName,
-      interests: savedUser.interests,
-      createdAt: savedUser.createdAt,
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      interests: user.interests,
+      companies:
+        !this.companiesRepository || (user.companies ?? []).length > 0
+          ? companies
+          : (await this.companiesRepository.find({
+              where: { ownerId: user.id },
+              order: { createdAt: 'ASC' },
+            })).map((company) => ({
+              id: company.id,
+              name: company.name,
+              email: company.email,
+              location: company.location,
+              description: company.description,
+              ownerId: company.ownerId,
+              createdAt: company.createdAt,
+            })),
+      createdAt: user.createdAt,
     };
   }
 }

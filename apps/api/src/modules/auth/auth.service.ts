@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { CompanyEntity } from '../companies/entities/company.entity';
 import { ChangeEmailDto } from './dto/change-email.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -32,6 +33,9 @@ export class AuthService {
     @Optional()
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity> | undefined,
+    @Optional()
+    @InjectRepository(CompanyEntity)
+    private readonly companiesRepository: Repository<CompanyEntity> | undefined,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -64,7 +68,7 @@ export class AuthService {
           email: savedUser.email,
         }),
         refreshToken,
-        user: this.serializeUser(savedUser),
+        user: await this.serializeUser(savedUser),
       };
     }
 
@@ -100,7 +104,7 @@ export class AuthService {
         email: savedUser.email,
       }),
       refreshToken,
-      user: this.serializeUser(savedUser),
+      user: await this.serializeUser(savedUser),
     };
   }
 
@@ -127,7 +131,7 @@ export class AuthService {
           email: user.email,
         }),
         refreshToken,
-        user: this.serializeUser(user),
+        user: await this.serializeUser(user),
       };
     }
 
@@ -154,7 +158,7 @@ export class AuthService {
         email: user.email,
       }),
       refreshToken,
-      user: this.serializeUser(user),
+      user: await this.serializeUser(user),
     };
   }
 
@@ -186,7 +190,7 @@ export class AuthService {
           email: user.email,
         }),
         refreshToken: nextRefreshToken,
-        user: this.serializeUser(user),
+        user: await this.serializeUser(user),
       };
     }
 
@@ -218,7 +222,7 @@ export class AuthService {
         email: user.email,
       }),
       refreshToken: nextRefreshToken,
-      user: this.serializeUser(user),
+      user: await this.serializeUser(user),
     };
   }
 
@@ -297,7 +301,7 @@ export class AuthService {
           email: updatedUser.email,
         }),
         refreshToken,
-        user: this.serializeUser(updatedUser),
+        user: await this.serializeUser(updatedUser),
       };
     }
 
@@ -333,7 +337,7 @@ export class AuthService {
         email: savedUser.email,
       }),
       refreshToken,
-      user: this.serializeUser(savedUser),
+      user: await this.serializeUser(savedUser),
     };
   }
 
@@ -370,12 +374,47 @@ export class AuthService {
     return { message: 'Password updated' };
   }
 
-  private serializeUser(user: UserEntity) {
+  private async serializeUser(user: UserEntity) {
+    const companies = !this.companiesRepository
+      ? this.inMemoryData
+          .listCompaniesByOwner(user.id)
+          .map((company) => ({
+            id: company.id,
+            name: company.name,
+            email: company.email,
+            location: company.location,
+            description: company.description,
+            ownerId: company.ownerId,
+            createdAt: company.createdAt,
+          }))
+      : user.companies?.map((company) => ({
+          id: company.id,
+          name: company.name,
+          email: company.email,
+          location: company.location,
+          description: company.description,
+          ownerId: company.ownerId,
+          createdAt: company.createdAt,
+        })) ??
+        (await this.companiesRepository.find({
+          where: { ownerId: user.id },
+          order: { createdAt: 'ASC' },
+        })).map((company) => ({
+          id: company.id,
+          name: company.name,
+          email: company.email,
+          location: company.location,
+          description: company.description,
+          ownerId: company.ownerId,
+          createdAt: company.createdAt,
+        }));
+
     return {
       id: user.id,
       email: user.email,
       displayName: user.displayName,
       interests: user.interests,
+      companies,
       createdAt: user.createdAt,
     };
   }

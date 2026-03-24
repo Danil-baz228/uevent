@@ -17,6 +17,7 @@ import {
 
 import { CommentsService } from '../comments/comments.service';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
+import { CompanyEntity } from '../companies/entities/company.entity';
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventRegistrationEntity } from '../registrations/entities/event-registration.entity';
 import { RegistrationsService } from '../registrations/registrations.service';
@@ -36,6 +37,9 @@ export class EventsService {
     @Optional()
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity> | undefined,
+    @Optional()
+    @InjectRepository(CompanyEntity)
+    private readonly companiesRepository: Repository<CompanyEntity> | undefined,
     @Optional()
     @InjectRepository(EventCommentEntity)
     private readonly commentsRepository: Repository<EventCommentEntity> | undefined,
@@ -79,7 +83,7 @@ export class EventsService {
 
     const [events, total] = await this.eventsRepository.findAndCount({
       where,
-      relations: { organizer: true },
+      relations: { organizer: true, company: true },
       order: this.buildFindOrder(query.sortBy),
       skip: (page - 1) * limit,
       take: limit,
@@ -117,7 +121,7 @@ export class EventsService {
         organizerId,
         publishAt: MoreThan(new Date()),
       },
-      relations: { organizer: true },
+      relations: { organizer: true, company: true },
       order: { publishAt: 'ASC', startsAt: 'ASC' },
     });
 
@@ -188,7 +192,7 @@ export class EventsService {
 
     const event = await this.eventsRepository.findOne({
       where: { id },
-      relations: { organizer: true },
+      relations: { organizer: true, company: true },
     });
 
     if (!event) {
@@ -201,14 +205,14 @@ export class EventsService {
       event.organizerId
         ? this.eventsRepository.find({
             where: this.buildVisibleEventWhere({ organizerId: event.organizerId }, viewerId),
-            relations: { organizer: true },
+            relations: { organizer: true, company: true },
             order: { startsAt: 'ASC' },
             take: 4,
           })
         : Promise.resolve([]),
       this.eventsRepository.find({
         where: this.buildVisibleEventWhere({ category: event.category }, viewerId),
-        relations: { organizer: true },
+        relations: { organizer: true, company: true },
         order: { startsAt: 'ASC' },
         take: 6,
       }),
@@ -247,11 +251,18 @@ export class EventsService {
   }
 
   async create(dto: CreateEventDto, organizerId: string) {
-    if (!this.eventsRepository || !this.usersRepository) {
+    const promoCodes = this.normalizePromoCodes(dto.promoCodes);
+
+    if (!this.eventsRepository || !this.usersRepository || !this.companiesRepository) {
       const organizer = this.inMemoryData.findUserById(organizerId);
+      const company = this.inMemoryData.findCompanyById(dto.companyId);
 
       if (!organizer) {
         throw new NotFoundException('Organizer was not found');
+      }
+
+      if (!company || company.ownerId !== organizerId) {
+        throw new ForbiddenException('You can create events only for your own company');
       }
 
       const savedEvent = this.inMemoryData.createEvent({
@@ -261,10 +272,13 @@ export class EventsService {
         format: dto.format,
         theme: dto.theme,
         city: dto.city,
+        address: dto.address?.trim() || null,
         posterUrl: dto.posterUrl?.trim() || null,
         startsAt: new Date(dto.startsAt),
         publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
+        redirectAfterPurchaseUrl: dto.redirectAfterPurchaseUrl ?? null,
         price: dto.price ?? 0,
+        promoCodes,
         capacity: dto.capacity ?? 50,
         hideAttendeeNames: false,
         attendeeVisibility: dto.attendeeVisibility ?? 'everyone',
@@ -272,6 +286,7 @@ export class EventsService {
         commentAccess: dto.commentAccess ?? 'everyone',
         commentsClosed: (dto.commentAccess ?? 'everyone') === 'closed',
         organizerId: organizer.id,
+        companyId: company.id,
       });
 
       return this.serializeEvent(savedEvent);
@@ -285,6 +300,14 @@ export class EventsService {
       throw new NotFoundException('Organizer was not found');
     }
 
+    const company = await this.companiesRepository.findOne({
+      where: { id: dto.companyId, ownerId: organizerId },
+    });
+
+    if (!company) {
+      throw new ForbiddenException('You can create events only for your own company');
+    }
+
     const event = this.eventsRepository.create({
       title: dto.title,
       description: dto.description,
@@ -292,10 +315,13 @@ export class EventsService {
       format: dto.format,
       theme: dto.theme,
       city: dto.city,
+      address: dto.address?.trim() || null,
       posterUrl: dto.posterUrl?.trim() || null,
       startsAt: new Date(dto.startsAt),
       publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
+      redirectAfterPurchaseUrl: dto.redirectAfterPurchaseUrl ?? null,
       price: dto.price ?? 0,
+      promoCodes,
       capacity: dto.capacity ?? 50,
       hideAttendeeNames: false,
       attendeeVisibility: dto.attendeeVisibility ?? 'everyone',
@@ -303,12 +329,13 @@ export class EventsService {
       commentAccess: dto.commentAccess ?? 'everyone',
       commentsClosed: (dto.commentAccess ?? 'everyone') === 'closed',
       organizerId: organizer.id,
+      companyId: company.id,
     });
 
     const savedEvent = await this.eventsRepository.save(event);
     const hydratedEvent = await this.eventsRepository.findOne({
       where: { id: savedEvent.id },
-      relations: { organizer: true },
+      relations: { organizer: true, company: true },
     });
 
     if (!hydratedEvent) {
@@ -319,6 +346,8 @@ export class EventsService {
   }
 
   async update(id: string, dto: UpdateEventDto, organizerId: string) {
+    const promoCodes = dto.promoCodes !== undefined ? this.normalizePromoCodes(dto.promoCodes) : undefined;
+
     if (!this.eventsRepository) {
       const event = this.inMemoryData.findEventById(id);
 
@@ -328,6 +357,14 @@ export class EventsService {
 
       this.ensureOrganizerAccess(event, organizerId);
 
+      if (dto.companyId !== undefined) {
+        const company = this.inMemoryData.findCompanyById(dto.companyId);
+
+        if (!company || company.ownerId !== organizerId) {
+          throw new ForbiddenException('You can assign events only to your own company');
+        }
+      }
+
       const savedEvent = this.inMemoryData.updateEvent(id, {
         ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
         ...(dto.description !== undefined ? { description: dto.description.trim() } : {}),
@@ -335,12 +372,18 @@ export class EventsService {
         ...(dto.format !== undefined ? { format: dto.format.trim() } : {}),
         ...(dto.theme !== undefined ? { theme: dto.theme.trim() } : {}),
         ...(dto.city !== undefined ? { city: dto.city.trim() } : {}),
+        ...(dto.address !== undefined ? { address: dto.address.trim() || null } : {}),
+        ...(dto.companyId !== undefined ? { companyId: dto.companyId } : {}),
         ...(dto.posterUrl !== undefined ? { posterUrl: dto.posterUrl?.trim() || null } : {}),
         ...(dto.startsAt !== undefined ? { startsAt: new Date(dto.startsAt) } : {}),
         ...(dto.publishAt !== undefined
           ? { publishAt: dto.publishAt ? new Date(dto.publishAt) : null }
           : {}),
+        ...(dto.redirectAfterPurchaseUrl !== undefined
+          ? { redirectAfterPurchaseUrl: dto.redirectAfterPurchaseUrl }
+          : {}),
         ...(dto.price !== undefined ? { price: dto.price } : {}),
+        ...(promoCodes !== undefined ? { promoCodes } : {}),
         ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
         ...(dto.hideAttendeeNames !== undefined
           ? { hideAttendeeNames: dto.hideAttendeeNames }
@@ -374,7 +417,7 @@ export class EventsService {
 
     const event = await this.eventsRepository.findOne({
       where: { id },
-      relations: { organizer: true },
+      relations: { organizer: true, company: true },
     });
 
     if (!event) {
@@ -407,6 +450,23 @@ export class EventsService {
       event.city = dto.city.trim();
     }
 
+    if (dto.address !== undefined) {
+      event.address = dto.address.trim() || null;
+    }
+
+    if (dto.companyId !== undefined) {
+      const company = await this.companiesRepository?.findOne({
+        where: { id: dto.companyId, ownerId: organizerId },
+      });
+
+      if (!company) {
+        throw new ForbiddenException('You can assign events only to your own company');
+      }
+
+      event.companyId = company.id;
+      event.company = company;
+    }
+
     if (dto.posterUrl !== undefined) {
       event.posterUrl = dto.posterUrl?.trim() || null;
     }
@@ -419,8 +479,16 @@ export class EventsService {
       event.publishAt = dto.publishAt ? new Date(dto.publishAt) : null;
     }
 
+    if (dto.redirectAfterPurchaseUrl !== undefined) {
+      event.redirectAfterPurchaseUrl = dto.redirectAfterPurchaseUrl;
+    }
+
     if (dto.price !== undefined) {
       event.price = dto.price;
+    }
+
+    if (promoCodes !== undefined) {
+      event.promoCodes = promoCodes;
     }
 
     if (dto.capacity !== undefined) {
@@ -511,6 +579,7 @@ export class EventsService {
       { ...whereClause, title: ILike(`%${search}%`) },
       { ...whereClause, description: ILike(`%${search}%`) },
       { ...whereClause, city: ILike(`%${search}%`) },
+      { ...whereClause, address: ILike(`%${search}%`) },
     ]);
   }
 
@@ -549,7 +618,7 @@ export class EventsService {
       return true;
     }
 
-    return [event.title, event.description, event.city].some((value) =>
+    return [event.title, event.description, event.city, event.address ?? ''].some((value) =>
       value.toLowerCase().includes(search),
     );
   }
@@ -563,10 +632,22 @@ export class EventsService {
       format: event.format,
       theme: event.theme,
       city: event.city,
+      address: event.address,
+      company: event.company
+        ? {
+            id: event.company.id,
+            name: event.company.name,
+            email: event.company.email,
+            location: event.company.location,
+            description: event.company.description,
+          }
+        : null,
       posterUrl: event.posterUrl,
       startsAt: event.startsAt,
       publishAt: event.publishAt,
+      redirectAfterPurchaseUrl: event.redirectAfterPurchaseUrl,
       price: Number(event.price),
+      promoCodes: event.promoCodes ?? [],
       capacity: event.capacity,
       hideAttendeeNames: event.hideAttendeeNames,
       attendeeVisibility: event.attendeeVisibility,
@@ -589,6 +670,30 @@ export class EventsService {
     if (event.organizerId !== organizerId) {
       throw new ForbiddenException('Only the organizer can manage this event');
     }
+  }
+
+  private normalizePromoCodes(
+    promoCodes?: Array<{ code: string; discountPercent: number }> | null,
+  ) {
+    if (!promoCodes?.length) {
+      return [];
+    }
+
+    const uniqueCodes = new Set<string>();
+
+    return promoCodes
+      .map((item) => ({
+        code: item.code.trim().toUpperCase(),
+        discountPercent: Math.max(1, Math.min(99, Math.round(Number(item.discountPercent)))),
+      }))
+      .filter((item) => {
+        if (!item.code || uniqueCodes.has(item.code)) {
+          return false;
+        }
+
+        uniqueCodes.add(item.code);
+        return true;
+      });
   }
 
   private buildVisibleEventWhere(

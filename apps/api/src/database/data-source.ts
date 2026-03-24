@@ -3,6 +3,8 @@ import 'dotenv/config';
 import { DataSource } from 'typeorm';
 
 import { EventCommentEntity } from '../modules/comments/entities/event-comment.entity';
+import { CompanyEntity } from '../modules/companies/entities/company.entity';
+import { CompanyNewsEntity } from '../modules/companies/entities/company-news.entity';
 import { EventEntity } from '../modules/events/entities/event.entity';
 import { NotificationEntity } from '../modules/notifications/entities/notification.entity';
 import { EventRegistrationEntity } from '../modules/registrations/entities/event-registration.entity';
@@ -19,6 +21,11 @@ import { AddAttendeeVisibility1760000000008 } from './migrations/1760000000008-A
 import { AddEventPublishAt1760000000009 } from './migrations/1760000000009-AddEventPublishAt';
 import { AddEventCommentAccessAndAttendeeNotifications1760000000010 } from './migrations/1760000000010-AddEventCommentAccessAndAttendeeNotifications';
 import { AddRegistrationReminderFields1760000000011 } from './migrations/1760000000011-AddRegistrationReminderFields';
+import { AddCompanies1760000000012 } from './migrations/1760000000012-AddCompanies';
+import { AddCompanyNews1760000000013 } from './migrations/1760000000013-AddCompanyNews';
+import { AddEventAddress1760000000014 } from './migrations/1760000000014-AddEventAddress';
+import { AddEventPromoCodes1760000000015 } from './migrations/1760000000015-AddEventPromoCodes';
+import { AddEventRedirectAfterPurchase1760000000016 } from './migrations/1760000000016-AddEventRedirectAfterPurchase';
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -29,6 +36,8 @@ const dataSource = new DataSource({
   database: process.env.DATABASE_NAME ?? 'uevent',
   entities: [
     UserEntity,
+    CompanyEntity,
+    CompanyNewsEntity,
     EventEntity,
     EventRegistrationEntity,
     EventCommentEntity,
@@ -47,6 +56,11 @@ const dataSource = new DataSource({
     AddEventPublishAt1760000000009,
     AddEventCommentAccessAndAttendeeNotifications1760000000010,
     AddRegistrationReminderFields1760000000011,
+    AddCompanies1760000000012,
+    AddCompanyNews1760000000013,
+    AddEventAddress1760000000014,
+    AddEventPromoCodes1760000000015,
+    AddEventRedirectAfterPurchase1760000000016,
   ],
   synchronize: false,
 });

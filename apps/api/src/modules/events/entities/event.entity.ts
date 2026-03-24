@@ -9,11 +9,16 @@ import {
 } from 'typeorm';
 
 import { EventCommentEntity } from '../../comments/entities/event-comment.entity';
+import { CompanyEntity } from '../../companies/entities/company.entity';
 import { EventRegistrationEntity } from '../../registrations/entities/event-registration.entity';
 import { UserEntity } from '../../users/entities/user.entity';
 
 export type AttendeeVisibility = 'everyone' | 'registered_only' | 'nobody';
 export type CommentAccess = 'everyone' | 'registered_only' | 'closed';
+export type EventPromoCode = {
+  code: string;
+  discountPercent: number;
+};
 
 @Entity({ name: 'events' })
 export class EventEntity {
@@ -39,6 +44,9 @@ export class EventEntity {
   city!: string;
 
   @Column({ type: 'varchar', nullable: true })
+  address!: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
   posterUrl!: string | null;
 
   @Column({ type: 'timestamptz' })
@@ -47,8 +55,14 @@ export class EventEntity {
   @Column({ type: 'timestamptz', nullable: true })
   publishAt!: Date | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  redirectAfterPurchaseUrl!: string | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   price!: number;
+
+  @Column({ type: 'simple-json', nullable: true })
+  promoCodes!: EventPromoCode[] | null;
 
   @Column({ default: 50 })
   capacity!: number;
@@ -71,12 +85,19 @@ export class EventEntity {
   @Column({ nullable: true })
   organizerId!: string | null;
 
+  @Column({ nullable: true })
+  companyId!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.events, { nullable: true })
   @JoinColumn({ name: 'organizerId' })
   organizer!: UserEntity | null;
+
+  @ManyToOne(() => CompanyEntity, (company) => company.events, { nullable: true })
+  @JoinColumn({ name: 'companyId' })
+  company!: CompanyEntity | null;
 
   @OneToMany(() => EventRegistrationEntity, (registration) => registration.event)
   registrations!: EventRegistrationEntity[];

@@ -1,6 +1,6 @@
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
-export class CreateCheckoutSessionDto {
+export class CompletePaymentDto {
   @IsString()
   eventId!: string;
 
@@ -12,4 +12,16 @@ export class CreateCheckoutSessionDto {
   @IsOptional()
   @IsString()
   promoCode?: string;
+
+  @IsString()
+  cardholderName!: string;
+
+  @IsString()
+  cardNumber!: string;
+
+  @IsString()
+  expiry!: string;
+
+  @IsString()
+  cvc!: string;
 }

@@ -81,7 +81,7 @@ export class RegistrationsService {
 
     const event = await this.eventsRepository.findOne({
       where: { id: dto.eventId },
-      relations: { organizer: true },
+      relations: { organizer: true, company: true },
     });
 
     if (!event) {
@@ -136,7 +136,7 @@ export class RegistrationsService {
 
     const registrations = await this.registrationsRepository.find({
       where: { userId },
-      relations: { event: { organizer: true } },
+      relations: { event: { organizer: true, company: true } },
       order: { createdAt: 'DESC' },
     });
 
@@ -173,7 +173,7 @@ export class RegistrationsService {
 
     const registration = await this.registrationsRepository.findOne({
       where: { eventId, userId, status: 'confirmed' },
-      relations: { event: { organizer: true } },
+      relations: { event: { organizer: true, company: true } },
     });
 
     if (!registration) {
@@ -233,7 +233,7 @@ export class RegistrationsService {
 
     const registration = await this.registrationsRepository.findOne({
       where: { stripeCheckoutSessionId: sessionId, userId },
-      relations: { event: { organizer: true } },
+      relations: { event: { organizer: true, company: true } },
     });
 
     if (!registration) {
@@ -243,10 +243,36 @@ export class RegistrationsService {
     return registration;
   }
 
+  async findEventForCheckout(eventId: string) {
+    if (!this.eventsRepository) {
+      const event = this.inMemoryData.findEventById(eventId);
+
+      if (!event) {
+        throw new NotFoundException(`Event ${eventId} was not found`);
+      }
+
+      this.ensureEventIsPublished(event);
+      return event;
+    }
+
+    const event = await this.eventsRepository.findOne({
+      where: { id: eventId },
+      relations: { organizer: true, company: true },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event ${eventId} was not found`);
+    }
+
+    this.ensureEventIsPublished(event);
+    return event;
+  }
+
   async createPendingStripeRegistration(
     eventId: string,
     userId: string,
     quantity: number,
+    amountTotal?: number,
   ) {
     if (!this.registrationsRepository || !this.eventsRepository) {
       const event = this.inMemoryData.findEventById(eventId);
@@ -274,7 +300,7 @@ export class RegistrationsService {
         status: 'pending_payment',
         paymentProvider: 'stripe',
         quantity,
-        amountTotal: eventPrice * quantity,
+        amountTotal: amountTotal ?? eventPrice * quantity,
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'unpaid',
         reminderAt: null,
@@ -289,7 +315,7 @@ export class RegistrationsService {
 
     const event = await this.eventsRepository.findOne({
       where: { id: eventId },
-      relations: { organizer: true },
+      relations: { organizer: true, company: true },
     });
 
     if (!event) {
@@ -316,7 +342,7 @@ export class RegistrationsService {
         status: 'pending_payment',
         paymentProvider: 'stripe',
         quantity,
-        amountTotal: eventPrice * quantity,
+        amountTotal: amountTotal ?? eventPrice * quantity,
         stripeCheckoutSessionId: null,
         stripePaymentStatus: 'unpaid',
         reminderAt: null,
@@ -349,9 +375,22 @@ export class RegistrationsService {
     registration: EventRegistrationEntity,
     paymentStatus: string,
   ) {
+    const event = registration.event
+      ? registration.event
+      : this.eventsRepository
+        ? await this.eventsRepository.findOne({
+            where: { id: registration.eventId },
+            relations: { organizer: true, company: true },
+          })
+        : this.inMemoryData.findEventById(registration.eventId);
+
+    if (!event) {
+      throw new NotFoundException(`Event ${registration.eventId} was not found`);
+    }
+
     if (!this.registrationsRepository) {
       if (registration.status === 'confirmed') {
-        return this.serializeRegistration(registration, registration.event);
+        return this.serializeRegistration(registration, event);
       }
 
       const savedRegistration = this.inMemoryData.updateRegistration(registration.id, {
@@ -363,11 +402,11 @@ export class RegistrationsService {
         throw new NotFoundException('Registration was not found');
       }
 
-      return this.serializeRegistration(savedRegistration, savedRegistration.event);
+      return this.serializeRegistration(savedRegistration, event);
     }
 
     if (registration.status === 'confirmed') {
-      return this.serializeRegistration(registration, registration.event);
+      return this.serializeRegistration(registration, event);
     }
 
     registration.status = 'confirmed';
@@ -375,7 +414,7 @@ export class RegistrationsService {
 
     const savedRegistration = await this.registrationsRepository.save(registration);
 
-    return this.serializeRegistration(savedRegistration, registration.event);
+    return this.serializeRegistration(savedRegistration, event);
   }
 
   async markStripePaymentStatus(registrationId: string, paymentStatus: string) {
@@ -469,6 +508,15 @@ export class RegistrationsService {
         format: event.format,
         theme: event.theme,
         city: event.city,
+        company: event.company
+          ? {
+              id: event.company.id,
+              name: event.company.name,
+              email: event.company.email,
+              location: event.company.location,
+              description: event.company.description,
+            }
+          : null,
         posterUrl: event.posterUrl,
         startsAt: event.startsAt,
         publishAt: event.publishAt,

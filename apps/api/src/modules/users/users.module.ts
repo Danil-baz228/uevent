@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { isDatabaseEnabled } from '../../config/database-mode';
+import { CompanyEntity } from '../companies/entities/company.entity';
 import { UsersController } from './users.controller';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
 
 const databaseImports = isDatabaseEnabled
-  ? [TypeOrmModule.forFeature([UserEntity])]
+  ? [TypeOrmModule.forFeature([UserEntity, CompanyEntity])]
   : [];
 
 @Module({

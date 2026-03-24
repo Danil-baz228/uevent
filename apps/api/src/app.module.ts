@@ -9,6 +9,9 @@ import { validateEnvironment } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { EventCommentEntity } from './modules/comments/entities/event-comment.entity';
+import { CompaniesModule } from './modules/companies/companies.module';
+import { CompanyNewsEntity } from './modules/companies/entities/company-news.entity';
+import { CompanyEntity } from './modules/companies/entities/company.entity';
 import { DatabaseSeederModule } from './modules/database-seeder/database-seeder.module';
 import { EventEntity } from './modules/events/entities/event.entity';
 import { EventsModule } from './modules/events/events.module';
@@ -35,6 +38,8 @@ const databaseImports = isDatabaseEnabled
           database: configService.get<string>('DATABASE_NAME'),
           entities: [
             UserEntity,
+            CompanyEntity,
+            CompanyNewsEntity,
             EventEntity,
             EventRegistrationEntity,
             EventCommentEntity,
@@ -60,6 +65,7 @@ const seederImports = isDatabaseEnabled ? [DatabaseSeederModule] : [];
     HealthModule,
     AuthModule,
     CommentsModule,
+    CompaniesModule,
     UsersModule,
     EventsModule,
     RegistrationsModule,

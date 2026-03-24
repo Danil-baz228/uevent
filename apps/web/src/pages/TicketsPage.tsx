@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
+  fetchCompanyById,
   fetchMyRegistrations,
   formatEventDate,
   formatPrice,
@@ -13,6 +14,7 @@ import {
 type TicketsStatus = 'loading' | 'success' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'error';
 type AccountSettingsTab = 'profile' | 'email' | 'password' | 'recovery';
+type AccountSectionTab = 'tickets' | 'companies' | 'publications';
 
 export function TicketsPage() {
   const {
@@ -24,12 +26,22 @@ export function TicketsPage() {
     changePassword,
   } = useAuth();
   const { copy, locale, language, translateCategory } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [status, setStatus] = useState<TicketsStatus>('loading');
   const [message, setMessage] = useState('');
   const [registrations, setRegistrations] = useState<
     Awaited<ReturnType<typeof fetchMyRegistrations>>
   >([]);
+  const [activeSectionTab, setActiveSectionTab] =
+    useState<AccountSectionTab>('tickets');
+  const [companyPublications, setCompanyPublications] = useState<
+    Awaited<ReturnType<typeof fetchCompanyById>>[]
+  >([]);
+  const [publicationsStatus, setPublicationsStatus] =
+    useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [publicationsMessage, setPublicationsMessage] = useState('');
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] =
@@ -124,6 +136,12 @@ export function TicketsPage() {
             failedProfile: 'Не вдалося оновити профіль',
             failedEmail: 'Не вдалося оновити пошту',
             failedPassword: 'Не вдалося оновити пароль',
+            companiesEyebrow: 'Компанії',
+            companiesTitle: 'Ваші компанії',
+            companiesText:
+              'Тут зібрані компанії, від імені яких можна створювати події та публікувати новини.',
+            noCompanies: 'Поки що ви не створили жодної компанії.',
+            openCompany: 'Відкрити компанію',
           }
         : {
             eyebrow: 'Account',
@@ -197,6 +215,52 @@ export function TicketsPage() {
             failedProfile: 'Failed to update profile',
             failedEmail: 'Failed to update email',
             failedPassword: 'Failed to update password',
+            companiesEyebrow: 'Companies',
+            companiesTitle: 'Your companies',
+            companiesText:
+              'These companies can publish events and post company news on the platform.',
+            noCompanies: 'You have not created any companies yet.',
+            openCompany: 'Open company',
+          },
+    [language],
+  );
+
+  const sectionCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            tickets: 'Мої квитки та реєстрації',
+            companies: 'Мої компанії',
+            publications: 'Публікації компаній',
+            publicationsEyebrow: 'Публікації',
+            publicationsTitle: 'Публікації ваших компаній',
+            publicationsText:
+              'Переглядайте новини та події, які публікують ваші компанії.',
+            publicationsLoading: 'Завантаження публікацій...',
+            publicationsFailed: 'Не вдалося завантажити публікації компаній.',
+            noPublications:
+              'Поки що немає новин чи подій, опублікованих від ваших компаній.',
+            latestNews: 'Остання новина',
+            companyEvents: 'Події компанії',
+            noCompanyNews: 'Новин ще немає.',
+            noCompanyEvents: 'Подій ще немає.',
+          }
+        : {
+            tickets: 'My tickets and registrations',
+            companies: 'My companies',
+            publications: 'Company publications',
+            publicationsEyebrow: 'Publications',
+            publicationsTitle: 'Publications from your companies',
+            publicationsText:
+              'Review the latest company news and events published on behalf of your companies.',
+            publicationsLoading: 'Loading company publications...',
+            publicationsFailed: 'Failed to load company publications.',
+            noPublications:
+              'There are no news posts or events published from your companies yet.',
+            latestNews: 'Latest news',
+            companyEvents: 'Company events',
+            noCompanyNews: 'No news yet.',
+            noCompanyEvents: 'No events yet.',
           },
     [language],
   );
@@ -259,6 +323,64 @@ export function TicketsPage() {
       active = false;
     };
   }, [token]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCompanyPublications() {
+      if (!token || !user || user.companies.length === 0) {
+        if (active) {
+          setCompanyPublications([]);
+          setPublicationsStatus('success');
+          setPublicationsMessage('');
+        }
+        return;
+      }
+
+      setPublicationsStatus('loading');
+      setPublicationsMessage('');
+
+      try {
+        const payload = await Promise.all(
+          user.companies.map((company) => fetchCompanyById(company.id, token)),
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setCompanyPublications(payload);
+        setPublicationsStatus('success');
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setCompanyPublications([]);
+        setPublicationsStatus('error');
+        setPublicationsMessage(
+          error instanceof Error ? error.message : sectionCopy.publicationsFailed,
+        );
+      }
+    }
+
+    void loadCompanyPublications();
+
+    return () => {
+      active = false;
+    };
+  }, [sectionCopy.publicationsFailed, token, user]);
+
+  useEffect(() => {
+    if (!location.state || typeof location.state !== 'object') {
+      return;
+    }
+
+    if ('openSettings' in location.state && location.state.openSettings) {
+      setSettingsOpen(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location, navigate]);
 
   if (!isReady) {
     return <p className="notice">{copy.common.loadingSession}</p>;
@@ -361,75 +483,204 @@ export function TicketsPage() {
         </div>
       </div>
 
-      <div className="section-header section-header-panel account-tickets-header">
-        <span className="eyebrow">{pageCopy.ticketsEyebrow}</span>
-        <h2>{pageCopy.ticketsTitle}</h2>
-        <p>{pageCopy.ticketsText}</p>
+      <div className="settings-toggle-grid account-section-tabs">
+        <button
+          type="button"
+          className={`settings-tile ${activeSectionTab === 'tickets' ? 'active' : ''}`}
+          onClick={() => setActiveSectionTab('tickets')}
+        >
+          <strong>{sectionCopy.tickets}</strong>
+        </button>
+        <button
+          type="button"
+          className={`settings-tile ${activeSectionTab === 'companies' ? 'active' : ''}`}
+          onClick={() => setActiveSectionTab('companies')}
+        >
+          <strong>{sectionCopy.companies}</strong>
+        </button>
+        <button
+          type="button"
+          className={`settings-tile ${activeSectionTab === 'publications' ? 'active' : ''}`}
+          onClick={() => setActiveSectionTab('publications')}
+        >
+          <strong>{sectionCopy.publications}</strong>
+        </button>
       </div>
 
-      {status === 'loading' ? <p className="notice">{pageCopy.loading}</p> : null}
-      {status === 'error' ? <p className="notice error">{message}</p> : null}
+      {activeSectionTab === 'companies' ? (
+        <>
+          <div className="section-header section-header-panel account-tickets-header">
+            <span className="eyebrow">{pageCopy.companiesEyebrow}</span>
+            <h2>{pageCopy.companiesTitle}</h2>
+            <p>{pageCopy.companiesText}</p>
+          </div>
 
-      {status === 'success' && registrations.length === 0 ? (
-        <section className="empty-state tickets-empty">
-          <span className="eyebrow">{pageCopy.ticketsEyebrow}</span>
-          <h1>{pageCopy.emptyTitle}</h1>
-          <p>{pageCopy.emptyText}</p>
-          <Link to="/discover" className="primary-button">
-            {pageCopy.openDiscover}
-          </Link>
-        </section>
+          {user.companies.length === 0 ? (
+            <p className="notice">{pageCopy.noCompanies}</p>
+          ) : (
+            <div className="related-list">
+              {user.companies.map((company) => (
+                <Link key={company.id} to={`/companies/${company.id}`} className="related-card">
+                  <strong>{company.name}</strong>
+                  <span className="muted">
+                    {company.location} / {company.email}
+                  </span>
+                  <span>{pageCopy.openCompany}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
       ) : null}
 
-      {registrations.length > 0 ? (
-        <div className="ticket-grid">
-          {registrations.map((registration) => (
-            <article key={registration.id} className="ticket-card">
-              <img
-                src={getEventPosterUrl(registration.event)}
-                alt={`${registration.event.title} poster`}
-                className="ticket-poster"
-              />
-              <div className="ticket-copy">
-                <div className="ticket-topline">
-                  <span
-                    className={`pill ticket-status ${
-                      registration.status === 'confirmed'
-                        ? 'ticket-status-confirmed'
-                        : 'ticket-status-pending'
-                    }`}
-                  >
-                    {registration.status === 'confirmed'
-                      ? pageCopy.statusConfirmed
-                      : pageCopy.statusPending}
-                  </span>
-                  <span className="pill">{translateCategory(registration.event.category)}</span>
-                </div>
+      {activeSectionTab === 'tickets' ? (
+        <>
+          <div className="section-header section-header-panel account-tickets-header">
+            <span className="eyebrow">{pageCopy.ticketsEyebrow}</span>
+            <h2>{pageCopy.ticketsTitle}</h2>
+            <p>{pageCopy.ticketsText}</p>
+          </div>
 
-                <h3>{registration.event.title}</h3>
-                <p>
-                  {registration.event.city} /{' '}
-                  {formatEventDate(registration.event.startsAt, locale)}
-                </p>
-                <div className="ticket-meta-row">
-                  <span className="ticket-price">
-                    {formatPrice(
-                      registration.amountTotal || registration.event.price,
-                      locale,
-                      copy.common.free,
+          {status === 'loading' ? <p className="notice">{pageCopy.loading}</p> : null}
+          {status === 'error' ? <p className="notice error">{message}</p> : null}
+
+          {status === 'success' && registrations.length === 0 ? (
+            <section className="empty-state tickets-empty">
+              <span className="eyebrow">{pageCopy.ticketsEyebrow}</span>
+              <h1>{pageCopy.emptyTitle}</h1>
+              <p>{pageCopy.emptyText}</p>
+              <Link to="/discover" className="primary-button">
+                {pageCopy.openDiscover}
+              </Link>
+            </section>
+          ) : null}
+
+          {registrations.length > 0 ? (
+            <div className="ticket-grid">
+              {registrations.map((registration) => (
+                <article key={registration.id} className="ticket-card">
+                  <img
+                    src={getEventPosterUrl(registration.event)}
+                    alt={`${registration.event.title} poster`}
+                    className="ticket-poster"
+                  />
+                  <div className="ticket-copy">
+                    <div className="ticket-topline">
+                      <span
+                        className={`pill ticket-status ${
+                          registration.status === 'confirmed'
+                            ? 'ticket-status-confirmed'
+                            : 'ticket-status-pending'
+                        }`}
+                      >
+                        {registration.status === 'confirmed'
+                          ? pageCopy.statusConfirmed
+                          : pageCopy.statusPending}
+                      </span>
+                      <span className="pill">
+                        {translateCategory(registration.event.category)}
+                      </span>
+                    </div>
+
+                    <h3>{registration.event.title}</h3>
+                    <p>
+                      {registration.event.city} /{' '}
+                      {formatEventDate(registration.event.startsAt, locale)}
+                    </p>
+                    <div className="ticket-meta-row">
+                      <span className="ticket-price">
+                        {formatPrice(
+                          registration.amountTotal || registration.event.price,
+                          locale,
+                          copy.common.free,
+                        )}
+                      </span>
+                    </div>
+                    <Link
+                      to={`/events/${registration.eventId}`}
+                      className="inline-link ticket-open-link"
+                    >
+                      {pageCopy.openEvent}
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {activeSectionTab === 'publications' ? (
+        <>
+          <div className="section-header section-header-panel account-tickets-header">
+            <span className="eyebrow">{sectionCopy.publicationsEyebrow}</span>
+            <h2>{sectionCopy.publicationsTitle}</h2>
+            <p>{sectionCopy.publicationsText}</p>
+          </div>
+
+          {publicationsStatus === 'loading' ? (
+            <p className="notice">{sectionCopy.publicationsLoading}</p>
+          ) : null}
+          {publicationsStatus === 'error' ? (
+            <p className="notice error">
+              {publicationsMessage || sectionCopy.publicationsFailed}
+            </p>
+          ) : null}
+          {publicationsStatus === 'success' &&
+          companyPublications.every(
+            (company) => company.events.length === 0 && company.news.length === 0,
+          ) ? (
+            <p className="notice">{sectionCopy.noPublications}</p>
+          ) : null}
+
+          {companyPublications.length > 0 ? (
+            <div className="card-grid">
+              {companyPublications.map((company) => (
+                <article key={company.id} className="event-card company-card">
+                  <div className="company-card-topline">
+                    <span className="pill">{company.location}</span>
+                    <Link to={`/companies/${company.id}`} className="inline-link company-open-link">
+                      {pageCopy.openCompany}
+                    </Link>
+                  </div>
+
+                  <h3>{company.name}</h3>
+
+                  <div className="company-news-preview">
+                    <strong>{sectionCopy.latestNews}</strong>
+                    {company.news[0] ? (
+                      <>
+                        <span className="muted">
+                          {formatEventDate(company.news[0].createdAt, locale)}
+                        </span>
+                        <p>{company.news[0].title}</p>
+                      </>
+                    ) : (
+                      <p>{sectionCopy.noCompanyNews}</p>
                     )}
-                  </span>
-                </div>
-                <Link
-                  to={`/events/${registration.eventId}`}
-                  className="inline-link ticket-open-link"
-                >
-                  {pageCopy.openEvent}
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
+                  </div>
+
+                  <div className="company-news-preview">
+                    <strong>{sectionCopy.companyEvents}</strong>
+                    {company.events.length > 0 ? (
+                      company.events.slice(0, 2).map((event) => (
+                        <Link
+                          key={event.id}
+                          to={`/events/${event.id}`}
+                          className="inline-link company-open-link"
+                        >
+                          {event.title}
+                        </Link>
+                      ))
+                    ) : (
+                      <p>{sectionCopy.noCompanyEvents}</p>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {settingsOpen ? (

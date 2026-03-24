@@ -4,6 +4,8 @@ import { Injectable } from '@nestjs/common';
 
 import { hashPassword } from '../auth/auth.utils';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
+import { CompanyNewsEntity } from '../companies/entities/company-news.entity';
+import { CompanyEntity } from '../companies/entities/company.entity';
 import { EventEntity } from '../events/entities/event.entity';
 import { NotificationEntity, NotificationType } from '../notifications/entities/notification.entity';
 import {
@@ -31,10 +33,13 @@ type CreateEventInput = {
   format: string;
   theme: string;
   city: string;
+  address?: string | null;
   posterUrl?: string | null;
   startsAt: Date;
   publishAt?: Date | null;
+  redirectAfterPurchaseUrl?: string | null;
   price?: number;
+  promoCodes?: EventEntity['promoCodes'];
   capacity?: number;
   hideAttendeeNames?: boolean;
   attendeeVisibility?: EventEntity['attendeeVisibility'];
@@ -42,6 +47,26 @@ type CreateEventInput = {
   commentAccess?: EventEntity['commentAccess'];
   commentsClosed?: boolean;
   organizerId?: string | null;
+  companyId?: string | null;
+  createdAt?: Date;
+};
+
+type CreateCompanyInput = {
+  id?: string;
+  name: string;
+  email: string;
+  location: string;
+  description?: string | null;
+  ownerId: string;
+  createdAt?: Date;
+};
+
+type CreateCompanyNewsInput = {
+  id?: string;
+  companyId: string;
+  authorId: string;
+  title: string;
+  content: string;
   createdAt?: Date;
 };
 
@@ -85,6 +110,8 @@ type CreateNotificationInput = {
 export class InMemoryDataService {
   private readonly users: UserEntity[];
   private readonly events: EventEntity[];
+  private readonly companies: CompanyEntity[];
+  private readonly companyNews: CompanyNewsEntity[];
   private readonly registrations: EventRegistrationEntity[];
   private readonly comments: EventCommentEntity[];
   private readonly notifications: NotificationEntity[];
@@ -109,6 +136,17 @@ export class InMemoryDataService {
     });
 
     this.users = [organizer, attendee];
+    this.companies = [
+      this.buildCompany({
+        id: 'cmp-demo-main',
+        name: 'Uevent Community',
+        email: 'team@uevent.local',
+        location: 'Kharkiv',
+        description: 'Demo organizer company for seeded events.',
+        ownerId: organizer.id,
+        createdAt: new Date('2026-02-20T10:00:00.000Z'),
+      }),
+    ];
 
     this.events = [
       this.buildEvent({
@@ -120,14 +158,18 @@ export class InMemoryDataService {
         format: 'Meetup',
         theme: 'Startups',
         city: 'Kharkiv',
+        address: '61002, Sumska Street 40, Kharkiv',
         startsAt: new Date('2026-04-08T15:30:00.000Z'),
         publishAt: null,
+        redirectAfterPurchaseUrl: '/account',
         price: 0,
+        promoCodes: [],
         capacity: 120,
         attendeeVisibility: 'everyone',
         notifyOnNewAttendee: true,
         commentAccess: 'everyone',
         organizerId: organizer.id,
+        companyId: 'cmp-demo-main',
         createdAt: new Date('2026-03-01T10:00:00.000Z'),
       }),
       this.buildEvent({
@@ -139,14 +181,18 @@ export class InMemoryDataService {
         format: 'Workshop',
         theme: 'Community',
         city: 'Kyiv',
+        address: '01001, Khreshchatyk Street 22, Kyiv',
         startsAt: new Date('2026-04-12T13:00:00.000Z'),
         publishAt: null,
+        redirectAfterPurchaseUrl: '/account',
         price: 15,
+        promoCodes: [{ code: 'SPRING20', discountPercent: 20 }],
         capacity: 60,
         attendeeVisibility: 'everyone',
         notifyOnNewAttendee: true,
         commentAccess: 'everyone',
         organizerId: organizer.id,
+        companyId: 'cmp-demo-main',
         createdAt: new Date('2026-03-02T11:00:00.000Z'),
       }),
       this.buildEvent({
@@ -158,15 +204,31 @@ export class InMemoryDataService {
         format: 'Meetup',
         theme: 'Technology',
         city: 'Lviv',
+        address: '79000, Rynok Square 1, Lviv',
         startsAt: new Date('2026-04-19T16:15:00.000Z'),
         publishAt: null,
+        redirectAfterPurchaseUrl: '/account',
         price: 0,
+        promoCodes: [],
         capacity: 80,
         attendeeVisibility: 'everyone',
         notifyOnNewAttendee: true,
         commentAccess: 'everyone',
         organizerId: organizer.id,
+        companyId: 'cmp-demo-main',
         createdAt: new Date('2026-03-03T12:00:00.000Z'),
+      }),
+    ];
+
+    this.companyNews = [
+      this.buildCompanyNews({
+        id: 'news-demo-1',
+        companyId: 'cmp-demo-main',
+        authorId: organizer.id,
+        title: 'Spring season is open',
+        content:
+          'We are preparing a new set of local meetups and workshops for builders, designers, and creative teams.',
+        createdAt: new Date('2026-03-05T10:30:00.000Z'),
       }),
     ];
 
@@ -238,6 +300,50 @@ export class InMemoryDataService {
 
     Object.assign(user, update);
     return this.cloneUser(user);
+  }
+
+  listCompaniesByOwner(ownerId: string) {
+    return this.companies
+      .filter((company) => company.ownerId === ownerId)
+      .map((company) => this.hydrateCompany(company));
+  }
+
+  listCompanies() {
+    return this.companies.map((company) => this.hydrateCompany(company));
+  }
+
+  findCompanyById(id: string) {
+    const company = this.companies.find((candidate) => candidate.id === id);
+    return company ? this.hydrateCompany(company) : null;
+  }
+
+  createCompany(input: CreateCompanyInput) {
+    const company = this.buildCompany(input);
+    this.companies.push(company);
+    return this.hydrateCompany(company);
+  }
+
+  updateCompany(id: string, update: Partial<CompanyEntity>) {
+    const company = this.companies.find((candidate) => candidate.id === id);
+
+    if (!company) {
+      return null;
+    }
+
+    Object.assign(company, update);
+    return this.hydrateCompany(company);
+  }
+
+  listCompanyNewsByCompany(companyId: string) {
+    return this.companyNews
+      .filter((item) => item.companyId === companyId)
+      .map((item) => this.hydrateCompanyNews(item));
+  }
+
+  createCompanyNews(input: CreateCompanyNewsInput) {
+    const newsItem = this.buildCompanyNews(input);
+    this.companyNews.push(newsItem);
+    return this.hydrateCompanyNews(newsItem);
   }
 
   listEvents() {
@@ -436,6 +542,8 @@ export class InMemoryDataService {
       interests: input.interests ?? [],
       createdAt: input.createdAt ?? new Date(),
       events: [],
+      companies: [],
+      companyNews: [],
       registrations: [],
       comments: [],
       notifications: [],
@@ -451,10 +559,13 @@ export class InMemoryDataService {
       format: input.format,
       theme: input.theme,
       city: input.city,
+      address: input.address ?? null,
       posterUrl: input.posterUrl ?? null,
       startsAt: input.startsAt,
       publishAt: input.publishAt ?? null,
+      redirectAfterPurchaseUrl: input.redirectAfterPurchaseUrl ?? null,
       price: input.price ?? 0,
+      promoCodes: input.promoCodes ?? [],
       capacity: input.capacity ?? 50,
       hideAttendeeNames: input.hideAttendeeNames ?? false,
       attendeeVisibility: input.attendeeVisibility ?? 'everyone',
@@ -463,10 +574,40 @@ export class InMemoryDataService {
       commentsClosed:
         input.commentsClosed ?? (input.commentAccess ? input.commentAccess === 'closed' : false),
       organizerId: input.organizerId ?? null,
+      companyId: input.companyId ?? null,
       createdAt: input.createdAt ?? new Date(),
       organizer: null,
+      company: null,
       registrations: [],
       comments: [],
+    };
+  }
+
+  private buildCompany(input: CreateCompanyInput): CompanyEntity {
+    return {
+      id: input.id ?? `cmp-${randomUUID()}`,
+      name: input.name,
+      email: input.email.toLowerCase(),
+      location: input.location,
+      description: input.description ?? null,
+      ownerId: input.ownerId,
+      createdAt: input.createdAt ?? new Date(),
+      owner: null as never,
+      events: [],
+      news: [],
+    };
+  }
+
+  private buildCompanyNews(input: CreateCompanyNewsInput): CompanyNewsEntity {
+    return {
+      id: input.id ?? `cnews-${randomUUID()}`,
+      companyId: input.companyId,
+      authorId: input.authorId,
+      title: input.title,
+      content: input.content,
+      createdAt: input.createdAt ?? new Date(),
+      company: null as never,
+      author: null as never,
     };
   }
 
@@ -524,6 +665,8 @@ export class InMemoryDataService {
       interests: [...user.interests],
       createdAt: new Date(user.createdAt),
       events: [],
+      companies: [],
+      companyNews: [],
       registrations: [],
       comments: [],
       notifications: [],
@@ -546,8 +689,28 @@ export class InMemoryDataService {
       publishAt: event.publishAt ? new Date(event.publishAt) : null,
       createdAt: new Date(event.createdAt),
       organizer: event.organizerId ? this.findUserById(event.organizerId) : null,
+      company: event.companyId ? this.findCompanyById(event.companyId) : null,
       registrations: [],
       comments: [],
+    };
+  }
+
+  private hydrateCompany(company: CompanyEntity): CompanyEntity {
+    return {
+      ...company,
+      createdAt: new Date(company.createdAt),
+      owner: this.findUserById(company.ownerId) as UserEntity,
+      events: [],
+      news: [],
+    };
+  }
+
+  private hydrateCompanyNews(newsItem: CompanyNewsEntity): CompanyNewsEntity {
+    return {
+      ...newsItem,
+      createdAt: new Date(newsItem.createdAt),
+      company: this.findCompanyById(newsItem.companyId) as CompanyEntity,
+      author: this.findUserById(newsItem.authorId) as UserEntity,
     };
   }
 

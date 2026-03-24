@@ -6,7 +6,6 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { translateFormat, translateTheme } from '../i18n/translations';
 import {
   ApiRegistration,
-  createCheckoutSession,
   createRegistration,
   fetchMyRegistrations,
   formatEventDate,
@@ -36,7 +35,6 @@ export function DiscoverPage() {
     page,
     limit: 6,
   });
-  const [activePaymentId, setActivePaymentId] = useState<string | null>(null);
   const [activeRegistrationId, setActiveRegistrationId] = useState<string | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [registrations, setRegistrations] = useState<ApiRegistration[]>([]);
@@ -102,36 +100,6 @@ export function DiscoverPage() {
     setPaymentMessage(copy.discover.signInRequired);
     window.location.assign('/auth');
     return false;
-  }
-
-  async function handleCheckout(eventId: string) {
-    if (!requireAuth() || !token) {
-      return;
-    }
-
-    setActivePaymentId(eventId);
-    setPaymentMessage('');
-
-    try {
-      const session = await createCheckoutSession(
-        {
-          eventId,
-          quantity: 1,
-        },
-        token,
-      );
-
-      if (!session.url) {
-        throw new Error(copy.eventDetails.buyFailed);
-      }
-
-      window.location.assign(session.url);
-    } catch (checkoutError) {
-      setPaymentMessage(
-        checkoutError instanceof Error ? checkoutError.message : copy.eventDetails.buyFailed,
-      );
-      setActivePaymentId(null);
-    }
   }
 
   async function handleFreeRegistration(eventId: string) {
@@ -329,16 +297,9 @@ export function DiscoverPage() {
               ) : getRegistration(event.id)?.status === 'pending_payment' ? (
                 <span className="pill status-pill">{copy.common.paymentPending}</span>
               ) : event.price > 0 ? (
-                <button
-                  type="button"
-                  className="primary-button pay-button"
-                  onClick={() => void handleCheckout(event.id)}
-                  disabled={activePaymentId === event.id}
-                >
-                  {activePaymentId === event.id
-                    ? copy.common.openingStripe
-                    : copy.common.buyTicket}
-                </button>
+                <Link to={`/events/${event.id}`} className="primary-button pay-button">
+                  {copy.common.buyTicket}
+                </Link>
               ) : (
                 <button
                   type="button"

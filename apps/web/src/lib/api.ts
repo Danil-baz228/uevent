@@ -13,7 +13,44 @@ export type AuthUser = {
   email: string;
   displayName: string;
   interests: string[];
+  companies: {
+    id: string;
+    name: string;
+    email: string;
+    location: string;
+    description: string | null;
+    ownerId: string;
+    createdAt: string;
+  }[];
   createdAt: string;
+};
+
+export type ApiCompany = {
+  id: string;
+  name: string;
+  email: string;
+  location: string;
+  description: string | null;
+  ownerId: string;
+  createdAt: string;
+};
+
+export type ApiCompanyNews = {
+  id: string;
+  companyId: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  author: {
+    id: string;
+    displayName: string;
+    email: string;
+  } | null;
+};
+
+export type CompanyListItem = ApiCompany & {
+  eventsCount: number;
+  latestNews: ApiCompanyNews | null;
 };
 
 export type AuthResponse = {
@@ -31,10 +68,20 @@ export type ApiEvent = {
   format: string;
   theme: string;
   city: string;
+  address: string | null;
+  company: {
+    id: string;
+    name: string;
+    email: string;
+    location: string;
+    description: string | null;
+  } | null;
   posterUrl: string | null;
   startsAt: string;
   publishAt: string | null;
+  redirectAfterPurchaseUrl: string | null;
   price: number;
+  promoCodes: Array<{ code: string; discountPercent: number }>;
   capacity: number;
   hideAttendeeNames: boolean;
   attendeeVisibility: 'everyone' | 'registered_only' | 'nobody';
@@ -107,10 +154,14 @@ export type CreateEventPayload = {
   format: string;
   theme: string;
   city: string;
+  address?: string;
+  companyId: string;
   posterUrl?: string;
   startsAt: string;
   publishAt?: string | null;
+  redirectAfterPurchaseUrl?: string | null;
   price?: number;
+  promoCodes?: Array<{ code: string; discountPercent: number }>;
   capacity?: number;
   attendeeVisibility?: 'everyone' | 'registered_only' | 'nobody';
   notifyOnNewAttendee?: boolean;
@@ -121,6 +172,30 @@ export type UpdateEventPayload = Partial<CreateEventPayload> & {
   hideAttendeeNames?: boolean;
   commentsClosed?: boolean;
 };
+export type CreateCompanyPayload = {
+  name: string;
+  email: string;
+  location: string;
+  description?: string;
+};
+export type UpdateCompanyPayload = Partial<CreateCompanyPayload>;
+export type CreateCompanyNewsPayload = {
+  title: string;
+  content: string;
+};
+export type CompanyDetailsResponse = ApiCompany & {
+  owner: {
+    id: string;
+    displayName: string;
+    email: string;
+  } | null;
+  canManage: boolean;
+  events: Pick<
+    ApiEvent,
+    'id' | 'title' | 'city' | 'startsAt' | 'publishAt' | 'isPublished' | 'price' | 'posterUrl' | 'category'
+  >[];
+  news: ApiCompanyNews[];
+};
 
 export type LoginPayload = {
   email: string;
@@ -130,6 +205,7 @@ export type LoginPayload = {
 export type CheckoutSessionPayload = {
   eventId: string;
   quantity?: number;
+  promoCode?: string;
 };
 
 export type CheckoutSessionResponse = {
@@ -139,6 +215,9 @@ export type CheckoutSessionResponse = {
   sessionId: string;
   url: string | null;
   amount: number;
+  originalAmount: number;
+  discountPercent: number;
+  promoCode: string | null;
   currency: string;
   eventId: string;
   eventTitle: string;
@@ -168,6 +247,29 @@ export type RegisterPayload = {
   displayName: string;
   email: string;
   password: string;
+};
+
+export type CompletePaymentPayload = {
+  eventId: string;
+  quantity?: number;
+  promoCode?: string;
+  cardholderName: string;
+  cardNumber: string;
+  expiry: string;
+  cvc: string;
+};
+
+export type CompletePaymentResponse = {
+  registration: ApiRegistration;
+  redirectUrl: string;
+  amount: number;
+  originalAmount: number;
+  discountPercent: number;
+  promoCode: string | null;
+  eventId: string;
+  eventTitle: string;
+  sessionId: string;
+  status: string;
 };
 
 export type UpdateCurrentUserPayload = {
@@ -390,6 +492,14 @@ export function confirmCheckoutSession(sessionId: string, token: string) {
   });
 }
 
+export function completePayment(payload: CompletePaymentPayload, token: string) {
+  return requestJson<CompletePaymentResponse>('/payments/complete', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
 export function createRegistration(eventId: string, token: string, quantity = 1) {
   return requestJson<ApiRegistration>('/registrations', {
     method: 'POST',
@@ -401,6 +511,54 @@ export function createRegistration(eventId: string, token: string, quantity = 1)
 export function fetchMyRegistrations(token: string) {
   return requestJson<ApiRegistration[]>('/registrations/me', {
     token,
+  });
+}
+
+export function createCompany(payload: CreateCompanyPayload, token: string) {
+  return requestJson<ApiCompany>('/companies', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchMyCompanies(token: string) {
+  return requestJson<ApiCompany[]>('/companies/me', {
+    token,
+  });
+}
+
+export function fetchCompanies() {
+  return requestJson<CompanyListItem[]>('/companies');
+}
+
+export function fetchCompanyById(companyId: string, token?: string | null) {
+  return requestJson<CompanyDetailsResponse>(`/companies/${companyId}`, {
+    token,
+  });
+}
+
+export function updateCompany(
+  companyId: string,
+  payload: UpdateCompanyPayload,
+  token: string,
+) {
+  return requestJson<ApiCompany>(`/companies/${companyId}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createCompanyNews(
+  companyId: string,
+  payload: CreateCompanyNewsPayload,
+  token: string,
+) {
+  return requestJson<ApiCompanyNews>(`/companies/${companyId}/news`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
   });
 }
 
@@ -619,4 +777,8 @@ export function getEventPosterUrl(event: Pick<ApiEvent, 'posterUrl' | 'title' | 
       <text x="70" y="600" font-family="Segoe UI, sans-serif" font-size="28" fill="#445066">Uevent poster</text>
     </svg>`,
   )}`;
+}
+
+export function getMapEmbedUrl(query: string) {
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed`;
 }

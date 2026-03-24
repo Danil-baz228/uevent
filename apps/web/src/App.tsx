@@ -11,7 +11,9 @@ import {
   markNotificationAsRead,
 } from './lib/api';
 import { AuthPage } from './pages/AuthPage';
+import { CompaniesPage } from './pages/CompaniesPage';
 import { CreateEventPage } from './pages/CreateEventPage';
+import { CompanyPage } from './pages/CompanyPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { EventDetailsPage } from './pages/EventDetailsPage';
 import { HomePage } from './pages/HomePage';
@@ -28,8 +30,10 @@ function Layout() {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const modalRef = useRef<HTMLDivElement | null>(null);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
@@ -66,11 +70,22 @@ function Layout() {
           openAccount: 'Open account',
           close: 'Close',
         };
-
-  const accountPath = user ? '/account' : '/auth';
+  const userMenuCopy =
+    language === 'uk'
+      ? {
+          profile: 'Профіль',
+          settings: 'Налаштування',
+          logout: 'Вийти',
+        }
+      : {
+          profile: 'Profile',
+          settings: 'Settings',
+          logout: 'Logout',
+        };
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
   const recentNotifications = useMemo(() => notifications.slice(0, 5), [notifications]);
   const hasMoreNotifications = notifications.length > 5;
+  const companiesLabel = language === 'uk' ? 'Компанії' : 'Companies';
 
   function localizeNotification(notification: ApiNotification) {
     const extractEventTitle = () => {
@@ -227,6 +242,21 @@ function Layout() {
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [notificationsModalOpen]);
 
+  useEffect(() => {
+    if (!userMenuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [userMenuOpen]);
+
   function getNotificationDestination(notification: ApiNotification) {
     return notification.eventId ? `/events/${notification.eventId}` : '/account';
   }
@@ -279,6 +309,11 @@ function Layout() {
     await clearAllNotifications(authToken);
     setNotifications([]);
     setNotificationsModalOpen(false);
+  }
+
+  function openAccount(openSettings = false) {
+    setUserMenuOpen(false);
+    navigate('/account', openSettings ? { state: { openSettings: true } } : undefined);
   }
 
   function renderNotificationItem(notification: ApiNotification) {
@@ -451,13 +486,44 @@ function Layout() {
                     ) : null}
                   </div>
 
-                  <div className="user-chip">
-                    <strong>{user.displayName}</strong>
-                    <span>{user.email}</span>
+                  <div className="user-menu-shell" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      className={`user-chip user-chip-button ${userMenuOpen ? 'active' : ''}`}
+                      onClick={() => setUserMenuOpen((value) => !value)}
+                    >
+                      <strong>{user.displayName}</strong>
+                      <span>{user.email}</span>
+                    </button>
+                    {userMenuOpen ? (
+                      <div className="user-menu-dropdown">
+                        <button
+                          type="button"
+                          className="user-menu-item"
+                          onClick={() => openAccount(false)}
+                        >
+                          {userMenuCopy.profile}
+                        </button>
+                        <button
+                          type="button"
+                          className="user-menu-item"
+                          onClick={() => openAccount(true)}
+                        >
+                          {userMenuCopy.settings}
+                        </button>
+                        <button
+                          type="button"
+                          className="user-menu-item danger"
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            logout();
+                          }}
+                        >
+                          {userMenuCopy.logout}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                  <button type="button" className="secondary-button" onClick={logout}>
-                    {copy.header.logout}
-                  </button>
                 </>
               ) : (
                 <NavLink to="/auth" className="secondary-button">
@@ -475,12 +541,17 @@ function Layout() {
               <NavLink to="/discover" className="nav-link">
                 {copy.nav.discover}
               </NavLink>
+              <NavLink to="/companies" className="nav-link">
+                {companiesLabel}
+              </NavLink>
               <NavLink to="/create-event" className="nav-link">
                 {copy.nav.createEvent}
               </NavLink>
-              <NavLink to={accountPath} className="nav-link">
-                {user ? copy.nav.account : copy.nav.login}
-              </NavLink>
+              {!user ? (
+                <NavLink to="/auth" className="nav-link">
+                  {copy.nav.login}
+                </NavLink>
+              ) : null}
             </nav>
             <p className="header-caption">{copy.footer.lead}</p>
           </div>
@@ -551,7 +622,9 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/discover" element={<DiscoverPage />} />
+        <Route path="/companies" element={<CompaniesPage />} />
         <Route path="/events/:eventId" element={<EventDetailsPage />} />
+        <Route path="/companies/:companyId" element={<CompanyPage />} />
         <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/account" element={<TicketsPage />} />
