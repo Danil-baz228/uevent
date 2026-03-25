@@ -1911,12 +1911,54 @@ img {
   margin-top: 4px;
 }
 
+.ticket-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.ticket-delivery-note {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: rgba(248, 251, 255, 0.72);
+}
+
 .tickets-empty {
   margin-top: 20px;
 }
 
+.payment-artifacts-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  text-align: left;
+}
+
+.payment-artifacts-actions {
+  justify-content: flex-start;
+}
+
 .organizer-settings-card {
   background: var(--organizer-card-background);
+}
+
+.organizer-subscription-card {
+  background: var(--organizer-card-background);
+}
+
+.organizer-subscription-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.organizer-subscription-actions > * {
+  flex: 1 1 200px;
 }
 
 .settings-header {

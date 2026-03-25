@@ -20,6 +20,17 @@ function getNumber(config: RawEnv, key: string, fallback?: number) {
   return value;
 }
 
+function getOptionalString(config: RawEnv, key: string) {
+  const value = config[key];
+
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  return normalized === '' ? undefined : normalized;
+}
+
 export function validateEnvironment(config: RawEnv) {
   return {
     PORT: getNumber(config, 'PORT', 4000),
@@ -44,5 +55,11 @@ export function validateEnvironment(config: RawEnv) {
       'STRIPE_CANCEL_URL',
       'http://localhost:5173/payment/cancel',
     ),
+    MAIL_FROM: getString(config, 'MAIL_FROM', 'tickets@uevent.local'),
+    SMTP_HOST: getOptionalString(config, 'SMTP_HOST'),
+    SMTP_PORT: getNumber(config, 'SMTP_PORT', 587),
+    SMTP_SECURE: String(config.SMTP_SECURE ?? 'false'),
+    SMTP_USER: getOptionalString(config, 'SMTP_USER'),
+    SMTP_PASS: getOptionalString(config, 'SMTP_PASS'),
   };
 }

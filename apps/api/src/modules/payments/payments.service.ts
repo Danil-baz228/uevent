@@ -9,11 +9,17 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 import { isDatabaseEnabled } from '../../config/database-mode';
+import { EventEntity } from '../events/entities/event.entity';
+import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RegistrationsService } from '../registrations/registrations.service';
 import { UsersService } from '../users/users.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { CompletePaymentDto } from './dto/complete-payment.dto';
+
+type ConfirmedRegistrationPayload = Awaited<
+  ReturnType<RegistrationsService['confirmStripeRegistration']>
+>;
 
 @Injectable()
 export class PaymentsService {
@@ -27,6 +33,7 @@ export class PaymentsService {
     private readonly registrationsService: RegistrationsService,
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
+    private readonly mailService: MailService,
     private readonly configService: ConfigService,
   ) {
     this.useMockCheckout = !isDatabaseEnabled;
@@ -152,6 +159,7 @@ export class PaymentsService {
       userId,
     );
     const attendee = await this.usersService.getCurrentUser(userId);
+    const wasConfirmed = registration.status === 'confirmed';
 
     if (this.useMockCheckout) {
       await this.registrationsService.markStripePaymentStatus(
@@ -162,17 +170,15 @@ export class PaymentsService {
         registration,
         'paid',
       );
-      await this.notificationsService.notifyPaymentConfirmed(
+
+      return this.finalizeSuccessfulPayment({
+        registration,
+        confirmedRegistration,
+        attendee,
         userId,
-        registration.event,
-      );
-      await this.notificationsService.notifyNewAttendee(
-        registration.event.organizer?.id ?? registration.event.organizerId ?? null,
-        registration.event,
-        attendee.displayName,
-        userId,
-      );
-      return confirmedRegistration;
+        sessionId,
+        wasConfirmed,
+      });
     }
 
     if (!this.stripe) {
@@ -198,14 +204,15 @@ export class PaymentsService {
       registration,
       session.payment_status,
     );
-    await this.notificationsService.notifyPaymentConfirmed(userId, registration.event);
-    await this.notificationsService.notifyNewAttendee(
-      registration.event.organizer?.id ?? registration.event.organizerId ?? null,
-      registration.event,
-      attendee.displayName,
+
+    return this.finalizeSuccessfulPayment({
+      registration,
+      confirmedRegistration,
+      attendee,
       userId,
-    );
-    return confirmedRegistration;
+      sessionId,
+      wasConfirmed,
+    });
   }
 
   async completePayment(dto: CompletePaymentDto, userId: string) {
@@ -269,16 +276,17 @@ export class PaymentsService {
       'paid',
     );
 
-    await this.notificationsService.notifyPaymentConfirmed(userId, registration.event);
-    await this.notificationsService.notifyNewAttendee(
-      registration.event.organizer?.id ?? registration.event.organizerId ?? null,
-      registration.event,
-      attendee.displayName,
+    const finalizedRegistration = await this.finalizeSuccessfulPayment({
+      registration,
+      confirmedRegistration,
+      attendee,
       userId,
-    );
+      sessionId,
+      wasConfirmed: false,
+    });
 
     return {
-      registration: confirmedRegistration,
+      registration: finalizedRegistration,
       redirectUrl: event.redirectAfterPurchaseUrl ?? '/account',
       amount: Math.round(finalAmount * 100),
       originalAmount: Math.round(amount * quantity * 100),
@@ -289,6 +297,79 @@ export class PaymentsService {
       sessionId,
       status: 'paid',
     };
+  }
+
+  private async finalizeSuccessfulPayment(input: {
+    registration: {
+      id: string;
+      quantity: number;
+      amountTotal: number;
+      ticketAssetPath: string | null;
+      paymentReceiptPreviewPath: string | null;
+      paymentReceiptMessageId: string | null;
+      paymentReceiptSentAt: Date | null;
+      event: EventEntity;
+    };
+    confirmedRegistration: ConfirmedRegistrationPayload;
+    attendee: {
+      displayName: string;
+      email: string;
+    };
+    userId: string;
+    sessionId: string;
+    wasConfirmed: boolean;
+  }) {
+    if (!input.wasConfirmed) {
+      await this.notificationsService.notifyPaymentConfirmed(
+        input.userId,
+        input.registration.event,
+      );
+      await this.notificationsService.notifyNewAttendee(
+        input.registration.event.organizer?.id ??
+          input.registration.event.organizerId ??
+          null,
+        input.registration.event,
+        input.attendee.displayName,
+        input.userId,
+      );
+    }
+
+    const alreadyHasArtifacts =
+      Boolean(input.registration.ticketAssetPath) &&
+      Boolean(input.registration.paymentReceiptPreviewPath) &&
+      Boolean(input.registration.paymentReceiptSentAt);
+
+    if (alreadyHasArtifacts) {
+      return input.confirmedRegistration;
+    }
+
+    try {
+      const artifacts = await this.mailService.sendPaymentReceipt({
+        attendee: input.attendee,
+        event: input.registration.event,
+        registrationId: input.registration.id,
+        sessionId: input.sessionId,
+        quantity: input.confirmedRegistration.quantity,
+        amountTotal: input.confirmedRegistration.amountTotal,
+        currency: this.currency,
+      });
+
+      await this.registrationsService.attachPaymentArtifacts(
+        input.registration.id,
+        artifacts,
+      );
+
+      return {
+        ...input.confirmedRegistration,
+        ticketAssetPath: artifacts.ticketAssetPath,
+        paymentReceiptPreviewPath: artifacts.paymentReceiptPreviewPath,
+        paymentReceiptMessageId: artifacts.paymentReceiptMessageId,
+        paymentReceiptSentAt: artifacts.paymentReceiptSentAt,
+      };
+    } catch (error) {
+      console.error('Failed to generate payment receipt email', error);
+      return input.confirmedRegistration;
+    }
   }
 
   private resolvePromo(

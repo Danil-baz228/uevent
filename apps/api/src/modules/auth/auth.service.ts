@@ -414,6 +414,7 @@ export class AuthService {
       email: user.email,
       displayName: user.displayName,
       interests: user.interests,
+      subscribedCompanyIds: user.subscribedCompanyIds ?? [],
       companies,
       createdAt: user.createdAt,
     };

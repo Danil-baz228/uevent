@@ -19,6 +19,7 @@ import { CommentsService } from '../comments/comments.service';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
 import { CompanyEntity } from '../companies/entities/company.entity';
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { EventRegistrationEntity } from '../registrations/entities/event-registration.entity';
 import { RegistrationsService } from '../registrations/registrations.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -50,6 +51,7 @@ export class EventsService {
       | undefined,
     private readonly registrationsService: RegistrationsService,
     private readonly commentsService: CommentsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(query: FindEventsDto) {
@@ -169,15 +171,7 @@ export class EventsService {
       return {
         ...this.serializeEvent(event),
         canViewAttendees,
-        attendees: canViewAttendees
-          ? event.hideAttendeeNames
-            ? attendees.map((attendee, index) => ({
-                ...attendee,
-                displayName: `Guest ${index + 1}`,
-                email: '',
-              }))
-            : attendees
-          : [],
+        attendees: canViewAttendees ? this.serializeAttendeesForView(attendees, event) : [],
         comments: comments.map((comment) => this.commentsService.serializeComment(comment)),
         organizerEvents: organizerEvents
           .filter((candidate) => candidate.id !== event.id)
@@ -229,15 +223,7 @@ export class EventsService {
     return {
       ...this.serializeEvent(event),
       canViewAttendees,
-      attendees: canViewAttendees
-        ? event.hideAttendeeNames
-          ? attendees.map((attendee, index) => ({
-              ...attendee,
-              displayName: `Guest ${index + 1}`,
-              email: '',
-            }))
-          : attendees
-        : [],
+      attendees: canViewAttendees ? this.serializeAttendeesForView(attendees, event) : [],
       comments: comments.map((comment) => this.commentsService.serializeComment(comment)),
       organizerEvents: organizerEvents
         .filter((candidate) => candidate.id !== event.id)
@@ -288,6 +274,14 @@ export class EventsService {
         organizerId: organizer.id,
         companyId: company.id,
       });
+
+      if (this.isEventPublished(savedEvent) && savedEvent.company) {
+        await this.notificationsService.notifyCompanyEventPublished(
+          savedEvent.company,
+          savedEvent,
+          organizerId,
+        );
+      }
 
       return this.serializeEvent(savedEvent);
     }
@@ -342,6 +336,14 @@ export class EventsService {
       throw new NotFoundException('Saved event could not be loaded');
     }
 
+    if (this.isEventPublished(hydratedEvent) && hydratedEvent.company) {
+      await this.notificationsService.notifyCompanyEventPublished(
+        hydratedEvent.company,
+        hydratedEvent,
+        organizerId,
+      );
+    }
+
     return this.serializeEvent(hydratedEvent);
   }
 
@@ -356,6 +358,7 @@ export class EventsService {
       }
 
       this.ensureOrganizerAccess(event, organizerId);
+      const wasPublished = this.isEventPublished(event);
 
       if (dto.companyId !== undefined) {
         const company = this.inMemoryData.findCompanyById(dto.companyId);
@@ -412,6 +415,14 @@ export class EventsService {
         throw new NotFoundException(`Event ${id} was not found`);
       }
 
+      if (!wasPublished && this.isEventPublished(savedEvent) && savedEvent.company) {
+        await this.notificationsService.notifyCompanyEventPublished(
+          savedEvent.company,
+          savedEvent,
+          organizerId,
+        );
+      }
+
       return this.serializeEvent(savedEvent);
     }
 
@@ -425,6 +436,7 @@ export class EventsService {
     }
 
     this.ensureOrganizerAccess(event, organizerId);
+    const wasPublished = this.isEventPublished(event);
 
     if (dto.title !== undefined) {
       event.title = dto.title.trim();
@@ -518,6 +530,15 @@ export class EventsService {
     }
 
     const savedEvent = await this.eventsRepository.save(event);
+
+    if (!wasPublished && this.isEventPublished(savedEvent) && savedEvent.company) {
+      await this.notificationsService.notifyCompanyEventPublished(
+        savedEvent.company,
+        savedEvent,
+        organizerId,
+      );
+    }
+
     return this.serializeEvent(savedEvent);
   }
 
@@ -757,6 +778,28 @@ export class EventsService {
     });
 
     return Boolean(registration);
+  }
+
+  private serializeAttendeesForView(
+    attendees: Array<{
+      id: string;
+      displayName: string;
+      email: string;
+      quantity: number;
+      showAttendeeName: boolean;
+      joinedAt: Date;
+    }>,
+    event: EventEntity,
+  ) {
+    return attendees.map((attendee, index) =>
+      event.hideAttendeeNames || !attendee.showAttendeeName
+        ? {
+            ...attendee,
+            displayName: `Guest ${index + 1}`,
+            email: '',
+          }
+        : attendee,
+    );
   }
 
   private buildFindOrder(

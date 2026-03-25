@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { CompanyEntity } from '../../companies/entities/company.entity';
 import { EventEntity } from '../../events/entities/event.entity';
 import { UserEntity } from '../../users/entities/user.entity';
 
@@ -15,7 +16,9 @@ export type NotificationType =
   | 'payment_confirmed'
   | 'new_attendee'
   | 'new_comment'
-  | 'event_reminder';
+  | 'event_reminder'
+  | 'company_news'
+  | 'company_event';
 
 @Entity({ name: 'notifications' })
 export class NotificationEntity {
@@ -27,6 +30,9 @@ export class NotificationEntity {
 
   @Column({ type: 'uuid', nullable: true })
   eventId!: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  companyId!: string | null;
 
   @Column({ type: 'varchar' })
   type!: NotificationType;
@@ -50,4 +56,8 @@ export class NotificationEntity {
   @ManyToOne(() => EventEntity, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'eventId' })
   event!: EventEntity | null;
+
+  @ManyToOne(() => CompanyEntity, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'companyId' })
+  company!: CompanyEntity | null;
 }

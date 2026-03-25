@@ -5,6 +5,7 @@ import { isDatabaseEnabled } from '../../config/database-mode';
 import { CommentsModule } from '../comments/comments.module';
 import { EventCommentEntity } from '../comments/entities/event-comment.entity';
 import { CompanyEntity } from '../companies/entities/company.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { RegistrationsModule } from '../registrations/registrations.module';
 import { EventRegistrationEntity } from '../registrations/entities/event-registration.entity';
 import { EventsController } from './events.controller';
@@ -29,6 +30,7 @@ const databaseImports = isDatabaseEnabled
     ...databaseImports,
     RegistrationsModule,
     CommentsModule,
+    NotificationsModule,
   ],
   controllers: [EventsController],
   providers: [EventsService],

@@ -54,6 +54,7 @@ function Layout() {
           clearAll: 'Очистити все',
           viewAll: 'Переглянути все',
           openEvent: 'Відкрити подію',
+          openCompany: 'Відкрити організатора',
           openAccount: 'Відкрити акаунт',
           close: 'Закрити',
         }
@@ -67,6 +68,7 @@ function Layout() {
           clearAll: 'Clear all',
           viewAll: 'View all',
           openEvent: 'Open event',
+          openCompany: 'Open organizer',
           openAccount: 'Open account',
           close: 'Close',
         };
@@ -105,9 +107,33 @@ function Layout() {
           return notification.body.match(/ commented on (.+)\.$/)?.[1] ?? notification.body;
         case 'event_reminder':
           return notification.body.match(/^(.+) starts on /)?.[1] ?? notification.body;
+        case 'company_event':
+          return (
+            notification.body.match(/^.+ published a new event: (.+)\.$/)?.[1] ??
+            notification.body
+          );
         default:
           return notification.body;
       }
+    };
+
+    const extractCompanyName = () => {
+      switch (notification.type) {
+        case 'company_news':
+          return notification.body.match(/^(.+) shared update: /)?.[1] ?? null;
+        case 'company_event':
+          return notification.body.match(/^(.+) published a new event: /)?.[1] ?? null;
+        default:
+          return null;
+      }
+    };
+
+    const extractNewsTitle = () => {
+      if (notification.type !== 'company_news') {
+        return null;
+      }
+
+      return notification.body.match(/^.+ shared update: (.+)\.$/)?.[1] ?? notification.body;
     };
 
     const extractActorName = () => {
@@ -122,6 +148,8 @@ function Layout() {
     };
 
     const eventTitle = extractEventTitle();
+    const companyName = extractCompanyName();
+    const newsTitle = extractNewsTitle();
     const rawActorName = extractActorName();
     const actorName =
       rawActorName === 'A new attendee' || rawActorName === 'Someone'
@@ -155,6 +183,16 @@ function Layout() {
             title: 'Нагадування про подію',
             body: `Незабаром починається подія ${eventTitle}. Перевірте час і не пропустіть її.`,
           };
+        case 'company_news':
+          return {
+            title: 'Нове оновлення від організатора',
+            body: `${companyName ?? 'Організатор'} поділився оновленням: ${newsTitle ?? notification.body}.`,
+          };
+        case 'company_event':
+          return {
+            title: 'Нова подія від організатора',
+            body: `${companyName ?? 'Організатор'} опублікував нову подію ${eventTitle}.`,
+          };
         default:
           return {
             title: notification.title,
@@ -167,6 +205,20 @@ function Layout() {
       return {
         title: 'Event reminder',
         body: `${eventTitle} is coming up soon. Check the time and don't miss it.`,
+      };
+    }
+
+    if (notification.type === 'company_news') {
+      return {
+        title: 'New organizer update',
+        body: `${companyName ?? 'The organizer'} shared: ${newsTitle ?? notification.body}.`,
+      };
+    }
+
+    if (notification.type === 'company_event') {
+      return {
+        title: 'New event from organizer',
+        body: `${companyName ?? 'The organizer'} published ${eventTitle}.`,
       };
     }
 
@@ -258,7 +310,15 @@ function Layout() {
   }, [userMenuOpen]);
 
   function getNotificationDestination(notification: ApiNotification) {
-    return notification.eventId ? `/events/${notification.eventId}` : '/account';
+    if (notification.eventId) {
+      return `/events/${notification.eventId}`;
+    }
+
+    if (notification.companyId) {
+      return `/companies/${notification.companyId}`;
+    }
+
+    return '/account';
   }
 
   async function markNotificationRead(notification: ApiNotification) {
@@ -346,7 +406,9 @@ function Layout() {
         >
           {destination === '/account'
             ? notificationsCopy.openAccount
-            : notificationsCopy.openEvent}
+            : destination.startsWith('/companies/')
+              ? notificationsCopy.openCompany
+              : notificationsCopy.openEvent}
         </button>
       </div>
     );

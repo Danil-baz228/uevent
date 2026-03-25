@@ -113,6 +113,7 @@ export class UsersService {
       email: user.email,
       displayName: user.displayName,
       interests: user.interests,
+      subscribedCompanyIds: user.subscribedCompanyIds ?? [],
       companies:
         !this.companiesRepository || (user.companies ?? []).length > 0
           ? companies

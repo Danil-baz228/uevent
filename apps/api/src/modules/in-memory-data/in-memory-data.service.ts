@@ -22,6 +22,7 @@ type CreateUserInput = {
   passwordHash: string;
   refreshTokenHash?: string | null;
   interests?: string[];
+  subscribedCompanyIds?: string[];
   createdAt?: Date;
 };
 
@@ -82,6 +83,11 @@ type CreateRegistrationInput = {
   stripePaymentStatus?: string | null;
   reminderAt?: Date | null;
   reminderSentAt?: Date | null;
+  showAttendeeName?: boolean;
+  ticketAssetPath?: string | null;
+  paymentReceiptPreviewPath?: string | null;
+  paymentReceiptMessageId?: string | null;
+  paymentReceiptSentAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -99,6 +105,7 @@ type CreateNotificationInput = {
   id?: string;
   userId: string;
   eventId?: string | null;
+  companyId?: string | null;
   type: NotificationType;
   title: string;
   body: string;
@@ -245,6 +252,11 @@ export class InMemoryDataService {
         stripePaymentStatus: 'free',
         reminderAt: null,
         reminderSentAt: null,
+        showAttendeeName: true,
+        ticketAssetPath: null,
+        paymentReceiptPreviewPath: null,
+        paymentReceiptMessageId: null,
+        paymentReceiptSentAt: null,
         createdAt: new Date('2026-03-10T09:30:00.000Z'),
         updatedAt: new Date('2026-03-10T09:30:00.000Z'),
       }),
@@ -289,6 +301,10 @@ export class InMemoryDataService {
     const user = this.buildUser(input);
     this.users.push(user);
     return this.cloneUser(user);
+  }
+
+  listUsers() {
+    return this.users.map((user) => this.cloneUser(user));
   }
 
   updateUser(id: string, update: Partial<UserEntity>) {
@@ -540,6 +556,7 @@ export class InMemoryDataService {
       passwordHash: input.passwordHash,
       refreshTokenHash: input.refreshTokenHash ?? null,
       interests: input.interests ?? [],
+      subscribedCompanyIds: input.subscribedCompanyIds ?? [],
       createdAt: input.createdAt ?? new Date(),
       events: [],
       companies: [],
@@ -624,6 +641,11 @@ export class InMemoryDataService {
       stripePaymentStatus: input.stripePaymentStatus ?? null,
       reminderAt: input.reminderAt ?? null,
       reminderSentAt: input.reminderSentAt ?? null,
+      showAttendeeName: input.showAttendeeName ?? true,
+      ticketAssetPath: input.ticketAssetPath ?? null,
+      paymentReceiptPreviewPath: input.paymentReceiptPreviewPath ?? null,
+      paymentReceiptMessageId: input.paymentReceiptMessageId ?? null,
+      paymentReceiptSentAt: input.paymentReceiptSentAt ?? null,
       createdAt: input.createdAt ?? new Date(),
       updatedAt: input.updatedAt ?? input.createdAt ?? new Date(),
       event: null as never,
@@ -649,6 +671,7 @@ export class InMemoryDataService {
       id: input.id ?? `ntf-${randomUUID()}`,
       userId: input.userId,
       eventId: input.eventId ?? null,
+      companyId: input.companyId ?? null,
       type: input.type,
       title: input.title,
       body: input.body,
@@ -656,6 +679,7 @@ export class InMemoryDataService {
       createdAt: input.createdAt ?? new Date(),
       user: null as never,
       event: null,
+      company: null,
     };
   }
 
@@ -663,6 +687,7 @@ export class InMemoryDataService {
     return {
       ...user,
       interests: [...user.interests],
+      subscribedCompanyIds: [...(user.subscribedCompanyIds ?? [])],
       createdAt: new Date(user.createdAt),
       events: [],
       companies: [],
@@ -678,6 +703,9 @@ export class InMemoryDataService {
       ...notification,
       createdAt: new Date(notification.createdAt),
       event: notification.eventId ? (this.findEventById(notification.eventId) as EventEntity) : null,
+      company: notification.companyId
+        ? (this.findCompanyById(notification.companyId) as CompanyEntity)
+        : null,
       user: this.findUserById(notification.userId) as UserEntity,
     };
   }
@@ -733,6 +761,13 @@ export class InMemoryDataService {
       reminderAt: registration.reminderAt ? new Date(registration.reminderAt) : null,
       reminderSentAt: registration.reminderSentAt
         ? new Date(registration.reminderSentAt)
+        : null,
+      showAttendeeName: registration.showAttendeeName,
+      ticketAssetPath: registration.ticketAssetPath ?? null,
+      paymentReceiptPreviewPath: registration.paymentReceiptPreviewPath ?? null,
+      paymentReceiptMessageId: registration.paymentReceiptMessageId ?? null,
+      paymentReceiptSentAt: registration.paymentReceiptSentAt
+        ? new Date(registration.paymentReceiptSentAt)
         : null,
       event: this.findEventById(registration.eventId) as EventEntity,
       user: this.findUserById(registration.userId) as UserEntity,

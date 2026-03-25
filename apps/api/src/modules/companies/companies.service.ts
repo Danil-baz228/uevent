@@ -9,6 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { UserEntity } from '../users/entities/user.entity';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { CreateCompanyNewsDto } from './dto/create-company-news.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -19,12 +21,16 @@ import { CompanyEntity } from './entities/company.entity';
 export class CompaniesService {
   constructor(
     private readonly inMemoryData: InMemoryDataService,
+    private readonly notificationsService: NotificationsService,
     @Optional()
     @InjectRepository(CompanyEntity)
     private readonly companiesRepository: Repository<CompanyEntity> | undefined,
     @Optional()
     @InjectRepository(CompanyNewsEntity)
     private readonly companyNewsRepository: Repository<CompanyNewsEntity> | undefined,
+    @Optional()
+    @InjectRepository(UserEntity)
+    private readonly usersRepository: Repository<UserEntity> | undefined,
   ) {}
 
   async create(ownerId: string, dto: CreateCompanyDto) {
@@ -253,14 +259,20 @@ export class CompaniesService {
     const company = await this.findOwnedByUser(companyId, ownerId);
 
     if (!this.companyNewsRepository) {
-      return this.serializeCompanyNews(
-        this.inMemoryData.createCompanyNews({
+      const newsItem = this.inMemoryData.createCompanyNews({
           companyId: company.id,
           authorId: ownerId,
           title: dto.title.trim(),
           content: dto.content.trim(),
-        }),
+        });
+
+      await this.notificationsService.notifyCompanyNewsPublished(
+        company,
+        newsItem.title,
+        ownerId,
       );
+
+      return this.serializeCompanyNews(newsItem);
     }
 
     const newsItem = await this.companyNewsRepository.save(
@@ -281,7 +293,91 @@ export class CompaniesService {
       throw new NotFoundException('Company news was not found');
     }
 
+    await this.notificationsService.notifyCompanyNewsPublished(
+      company,
+      hydratedNews.title,
+      ownerId,
+    );
+
     return this.serializeCompanyNews(hydratedNews);
+  }
+
+  async subscribeToNotifications(companyId: string, userId: string) {
+    await this.ensureCompanyExists(companyId);
+
+    if (!this.usersRepository) {
+      const user = this.inMemoryData.findUserById(userId);
+
+      if (!user) {
+        throw new NotFoundException('User was not found');
+      }
+
+      const subscribedCompanyIds = Array.from(
+        new Set([...(user.subscribedCompanyIds ?? []), companyId]),
+      );
+
+      this.inMemoryData.updateUser(userId, { subscribedCompanyIds });
+
+      return {
+        companyId,
+        isSubscribed: true,
+      };
+    }
+
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException('User was not found');
+    }
+
+    user.subscribedCompanyIds = Array.from(
+      new Set([...(user.subscribedCompanyIds ?? []), companyId]),
+    );
+    await this.usersRepository.save(user);
+
+    return {
+      companyId,
+      isSubscribed: true,
+    };
+  }
+
+  async unsubscribeFromNotifications(companyId: string, userId: string) {
+    await this.ensureCompanyExists(companyId);
+
+    if (!this.usersRepository) {
+      const user = this.inMemoryData.findUserById(userId);
+
+      if (!user) {
+        throw new NotFoundException('User was not found');
+      }
+
+      const subscribedCompanyIds = (user.subscribedCompanyIds ?? []).filter(
+        (currentCompanyId) => currentCompanyId !== companyId,
+      );
+
+      this.inMemoryData.updateUser(userId, { subscribedCompanyIds });
+
+      return {
+        companyId,
+        isSubscribed: false,
+      };
+    }
+
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException('User was not found');
+    }
+
+    user.subscribedCompanyIds = (user.subscribedCompanyIds ?? []).filter(
+      (currentCompanyId) => currentCompanyId !== companyId,
+    );
+    await this.usersRepository.save(user);
+
+    return {
+      companyId,
+      isSubscribed: false,
+    };
   }
 
   async findOwnedByUser(companyId: string, ownerId: string) {
@@ -317,6 +413,28 @@ export class CompaniesService {
       ownerId: company.ownerId,
       createdAt: company.createdAt,
     };
+  }
+
+  private async ensureCompanyExists(companyId: string) {
+    if (!this.companiesRepository) {
+      const company = this.inMemoryData.findCompanyById(companyId);
+
+      if (!company) {
+        throw new NotFoundException('Company was not found');
+      }
+
+      return company;
+    }
+
+    const company = await this.companiesRepository.findOne({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Company was not found');
+    }
+
+    return company;
   }
 
   private serializeCompanyListItem(company: CompanyEntity) {

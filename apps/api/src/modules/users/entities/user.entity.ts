@@ -27,6 +27,9 @@ export class UserEntity {
   @Column('text', { array: true, default: '{}' })
   interests!: string[];
 
+  @Column('uuid', { array: true, default: '{}' })
+  subscribedCompanyIds!: string[];
+
   @CreateDateColumn()
   createdAt!: Date;
 

@@ -13,6 +13,7 @@ export type AuthUser = {
   email: string;
   displayName: string;
   interests: string[];
+  subscribedCompanyIds: string[];
   companies: {
     id: string;
     name: string;
@@ -102,6 +103,7 @@ export type EventAttendee = {
   displayName: string;
   email: string;
   quantity: number;
+  showAttendeeName: boolean;
   joinedAt: string;
 };
 
@@ -197,6 +199,11 @@ export type CompanyDetailsResponse = ApiCompany & {
   news: ApiCompanyNews[];
 };
 
+export type CompanySubscriptionResponse = {
+  companyId: string;
+  isSubscribed: boolean;
+};
+
 export type LoginPayload = {
   email: string;
   password: string;
@@ -238,6 +245,11 @@ export type ApiRegistration = {
   stripePaymentStatus: string | null;
   reminderAt: string | null;
   reminderSentAt: string | null;
+  showAttendeeName: boolean;
+  ticketAssetPath: string | null;
+  paymentReceiptPreviewPath: string | null;
+  paymentReceiptMessageId: string | null;
+  paymentReceiptSentAt: string | null;
   createdAt: string;
   updatedAt: string;
   event: ApiEvent;
@@ -301,12 +313,15 @@ export type ApiNotification = {
   id: string;
   userId: string;
   eventId: string | null;
+  companyId: string | null;
   type:
     | 'registration_confirmed'
     | 'payment_confirmed'
     | 'new_attendee'
     | 'new_comment'
-    | 'event_reminder';
+    | 'event_reminder'
+    | 'company_news'
+    | 'company_event';
   title: string;
   body: string;
   isRead: boolean;
@@ -562,15 +577,29 @@ export function createCompanyNews(
   });
 }
 
+export function subscribeToCompanyNotifications(companyId: string, token: string) {
+  return requestJson<CompanySubscriptionResponse>(`/companies/${companyId}/subscriptions`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export function unsubscribeFromCompanyNotifications(companyId: string, token: string) {
+  return requestJson<CompanySubscriptionResponse>(`/companies/${companyId}/subscriptions`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
 export function updateRegistrationReminder(
   eventId: string,
-  reminderAt: string | null,
+  payload: { reminderAt: string | null; showAttendeeName?: boolean },
   token: string,
 ) {
   return requestJson<ApiRegistration>(`/registrations/${eventId}/reminder`, {
     method: 'PATCH',
     token,
-    body: JSON.stringify({ reminderAt }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -781,4 +810,16 @@ export function getEventPosterUrl(event: Pick<ApiEvent, 'posterUrl' | 'title' | 
 
 export function getMapEmbedUrl(query: string) {
   return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed`;
+}
+
+export function getApiAssetUrl(path: string | null) {
+  if (!path) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  return `${API_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`;
 }

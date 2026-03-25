@@ -65,6 +65,11 @@ export class RegistrationsService {
         stripePaymentStatus: 'free',
         reminderAt: null,
         reminderSentAt: null,
+        showAttendeeName: true,
+        ticketAssetPath: null,
+        paymentReceiptPreviewPath: null,
+        paymentReceiptMessageId: null,
+        paymentReceiptSentAt: null,
       });
 
       const attendee = await this.usersService.getCurrentUser(userId);
@@ -111,6 +116,11 @@ export class RegistrationsService {
         stripePaymentStatus: 'free',
         reminderAt: null,
         reminderSentAt: null,
+        showAttendeeName: true,
+        ticketAssetPath: null,
+        paymentReceiptPreviewPath: null,
+        paymentReceiptMessageId: null,
+        paymentReceiptSentAt: null,
       }),
     );
 
@@ -162,6 +172,7 @@ export class RegistrationsService {
       const savedRegistration = this.inMemoryData.updateRegistration(registration.id, {
         reminderAt,
         reminderSentAt: null,
+        showAttendeeName: dto.showAttendeeName ?? registration.showAttendeeName,
       });
 
       if (!savedRegistration) {
@@ -184,6 +195,11 @@ export class RegistrationsService {
     this.ensureReminderIsValid(reminderAt, registration.event.startsAt);
     registration.reminderAt = reminderAt;
     registration.reminderSentAt = null;
+
+    if (dto.showAttendeeName !== undefined) {
+      registration.showAttendeeName = dto.showAttendeeName;
+    }
+
     const savedRegistration = await this.registrationsRepository.save(registration);
 
     return this.serializeRegistration(savedRegistration, registration.event);
@@ -199,6 +215,7 @@ export class RegistrationsService {
           displayName: registration.user.displayName,
           email: registration.user.email,
           quantity: registration.quantity,
+          showAttendeeName: registration.showAttendeeName,
           joinedAt: registration.createdAt,
         }));
     }
@@ -214,6 +231,7 @@ export class RegistrationsService {
       displayName: registration.user.displayName,
       email: registration.user.email,
       quantity: registration.quantity,
+      showAttendeeName: registration.showAttendeeName,
       joinedAt: registration.createdAt,
     }));
   }
@@ -305,6 +323,11 @@ export class RegistrationsService {
         stripePaymentStatus: 'unpaid',
         reminderAt: null,
         reminderSentAt: null,
+        showAttendeeName: true,
+        ticketAssetPath: null,
+        paymentReceiptPreviewPath: null,
+        paymentReceiptMessageId: null,
+        paymentReceiptSentAt: null,
       });
 
       return {
@@ -347,6 +370,11 @@ export class RegistrationsService {
         stripePaymentStatus: 'unpaid',
         reminderAt: null,
         reminderSentAt: null,
+        showAttendeeName: true,
+        ticketAssetPath: null,
+        paymentReceiptPreviewPath: null,
+        paymentReceiptMessageId: null,
+        paymentReceiptSentAt: null,
       }),
     );
 
@@ -430,6 +458,31 @@ export class RegistrationsService {
     });
   }
 
+  async attachPaymentArtifacts(
+    registrationId: string,
+    payload: {
+      ticketAssetPath: string;
+      paymentReceiptPreviewPath: string;
+      paymentReceiptMessageId: string | null;
+      paymentReceiptSentAt: Date;
+    },
+  ) {
+    if (!this.registrationsRepository) {
+      const updatedRegistration = this.inMemoryData.updateRegistration(
+        registrationId,
+        payload,
+      );
+
+      if (!updatedRegistration) {
+        throw new NotFoundException('Registration was not found');
+      }
+
+      return;
+    }
+
+    await this.registrationsRepository.update(registrationId, payload);
+  }
+
   private async ensureNoExistingRegistration(eventId: string, userId: string) {
     if (!this.registrationsRepository) {
       const existingRegistration = this.inMemoryData.findRegistrationByEventAndUser(
@@ -498,6 +551,11 @@ export class RegistrationsService {
       stripePaymentStatus: registration.stripePaymentStatus,
       reminderAt: registration.reminderAt,
       reminderSentAt: registration.reminderSentAt,
+      showAttendeeName: registration.showAttendeeName,
+      ticketAssetPath: registration.ticketAssetPath,
+      paymentReceiptPreviewPath: registration.paymentReceiptPreviewPath,
+      paymentReceiptMessageId: registration.paymentReceiptMessageId,
+      paymentReceiptSentAt: registration.paymentReceiptSentAt,
       createdAt: registration.createdAt,
       updatedAt: registration.updatedAt,
       event: {

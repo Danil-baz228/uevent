@@ -5,16 +5,18 @@ import {
   Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ArrayContains, Repository } from 'typeorm';
 
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventEntity } from '../events/entities/event.entity';
 import { EventRegistrationEntity } from '../registrations/entities/event-registration.entity';
+import { UserEntity } from '../users/entities/user.entity';
 import { NotificationEntity, NotificationType } from './entities/notification.entity';
 
 type CreateNotificationInput = {
   userId: string;
   eventId?: string | null;
+  companyId?: string | null;
   type: NotificationType;
   title: string;
   body: string;
@@ -32,6 +34,9 @@ export class NotificationsService {
     private readonly registrationsRepository:
       | Repository<EventRegistrationEntity>
       | undefined,
+    @Optional()
+    @InjectRepository(UserEntity)
+    private readonly usersRepository: Repository<UserEntity> | undefined,
   ) {}
 
   async create(input: CreateNotificationInput) {
@@ -39,6 +44,7 @@ export class NotificationsService {
       return this.inMemoryData.createNotification({
         userId: input.userId,
         eventId: input.eventId ?? null,
+        companyId: input.companyId ?? null,
         type: input.type,
         title: input.title,
         body: input.body,
@@ -50,6 +56,7 @@ export class NotificationsService {
       this.notificationsRepository.create({
         userId: input.userId,
         eventId: input.eventId ?? null,
+        companyId: input.companyId ?? null,
         type: input.type,
         title: input.title,
         body: input.body,
@@ -140,6 +147,7 @@ export class NotificationsService {
     return this.create({
       userId,
       eventId: event.id,
+      companyId: event.companyId ?? null,
       type: 'registration_confirmed',
       title: 'Registration confirmed',
       body: `You are registered for ${event.title}.`,
@@ -150,6 +158,7 @@ export class NotificationsService {
     return this.create({
       userId,
       eventId: event.id,
+      companyId: event.companyId ?? null,
       type: 'payment_confirmed',
       title: 'Payment confirmed',
       body: `Your ticket for ${event.title} is confirmed.`,
@@ -169,6 +178,7 @@ export class NotificationsService {
     return this.create({
       userId: organizerId,
       eventId: event.id,
+      companyId: event.companyId ?? null,
       type: 'new_attendee',
       title: 'New attendee joined',
       body: `${attendeeName} registered for ${event.title}.`,
@@ -188,16 +198,59 @@ export class NotificationsService {
     return this.create({
       userId: organizerId,
       eventId: event.id,
+      companyId: event.companyId ?? null,
       type: 'new_comment',
       title: 'New comment on your event',
       body: `${authorName} commented on ${event.title}.`,
     });
   }
 
+  async notifyCompanyNewsPublished(
+    company: { id: string; name: string },
+    newsTitle: string,
+    actorId?: string | null,
+  ) {
+    const subscriberIds = await this.findSubscribedUserIds(company.id, actorId);
+
+    await Promise.all(
+      subscriberIds.map((userId) =>
+        this.create({
+          userId,
+          companyId: company.id,
+          type: 'company_news',
+          title: 'New organizer update',
+          body: `${company.name} shared update: ${newsTitle}.`,
+        }),
+      ),
+    );
+  }
+
+  async notifyCompanyEventPublished(
+    company: { id: string; name: string },
+    event: EventEntity,
+    actorId?: string | null,
+  ) {
+    const subscriberIds = await this.findSubscribedUserIds(company.id, actorId);
+
+    await Promise.all(
+      subscriberIds.map((userId) =>
+        this.create({
+          userId,
+          eventId: event.id,
+          companyId: company.id,
+          type: 'company_event',
+          title: 'New event from organizer',
+          body: `${company.name} published a new event: ${event.title}.`,
+        }),
+      ),
+    );
+  }
+
   async notifyEventReminder(userId: string, event: EventEntity) {
     return this.create({
       userId,
       eventId: event.id,
+      companyId: event.companyId ?? null,
       type: 'event_reminder',
       title: 'Event reminder',
       body: `${event.title} starts on ${event.startsAt.toLocaleString('en-US')}.`,
@@ -209,6 +262,7 @@ export class NotificationsService {
       id: notification.id,
       userId: notification.userId,
       eventId: notification.eventId,
+      companyId: notification.companyId,
       type: notification.type,
       title: notification.title,
       body: notification.body,
@@ -264,5 +318,26 @@ export class NotificationsService {
       registration.reminderSentAt = now;
       await this.registrationsRepository.save(registration);
     }
+  }
+
+  private async findSubscribedUserIds(
+    companyId: string,
+    excludeUserId?: string | null,
+  ) {
+    if (!this.usersRepository) {
+      return this.inMemoryData
+        .listUsers()
+        .filter((user) => (user.subscribedCompanyIds ?? []).includes(companyId))
+        .filter((user) => user.id !== excludeUserId)
+        .map((user) => user.id);
+    }
+
+    const users = await this.usersRepository.find({
+      where: {
+        subscribedCompanyIds: ArrayContains([companyId]),
+      },
+    });
+
+    return users.filter((user) => user.id !== excludeUserId).map((user) => user.id);
   }
 }

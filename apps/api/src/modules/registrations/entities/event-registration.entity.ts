@@ -51,6 +51,21 @@ export class EventRegistrationEntity {
   @Column({ type: 'timestamptz', nullable: true })
   reminderSentAt!: Date | null;
 
+  @Column({ type: 'boolean', default: true })
+  showAttendeeName!: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  ticketAssetPath!: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  paymentReceiptPreviewPath!: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  paymentReceiptMessageId!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  paymentReceiptSentAt!: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

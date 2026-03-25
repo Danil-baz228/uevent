@@ -8,6 +8,7 @@ import {
   fetchMyRegistrations,
   formatEventDate,
   formatPrice,
+  getApiAssetUrl,
   getEventPosterUrl,
 } from '../lib/api';
 
@@ -221,6 +222,24 @@ export function TicketsPage() {
               'These companies can publish events and post company news on the platform.',
             noCompanies: 'You have not created any companies yet.',
             openCompany: 'Open company',
+          },
+    [language],
+  );
+
+  const deliveryCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            ready: 'Лист про оплату та квиток уже згенеровані.',
+            sentAt: (value: string) => `Надіслано: ${value}`,
+            openPreview: 'Відкрити email-preview',
+            openTicket: 'Відкрити квиток',
+          }
+        : {
+            ready: 'Payment email and generated ticket are ready.',
+            sentAt: (value: string) => `Sent at: ${value}`,
+            openPreview: 'Open email preview',
+            openTicket: 'Open generated ticket',
           },
     [language],
   );
@@ -596,12 +615,50 @@ export function TicketsPage() {
                         )}
                       </span>
                     </div>
-                    <Link
-                      to={`/events/${registration.eventId}`}
-                      className="inline-link ticket-open-link"
-                    >
-                      {pageCopy.openEvent}
-                    </Link>
+                    {registration.paymentReceiptPreviewPath ||
+                    registration.ticketAssetPath ? (
+                      <div className="ticket-delivery-note">
+                        <span>{deliveryCopy.ready}</span>
+                        {registration.paymentReceiptSentAt ? (
+                          <span className="muted">
+                            {deliveryCopy.sentAt(
+                              new Intl.DateTimeFormat(locale, {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              }).format(new Date(registration.paymentReceiptSentAt)),
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <div className="ticket-actions">
+                      <Link
+                        to={`/events/${registration.eventId}`}
+                        className="inline-link ticket-open-link"
+                      >
+                        {pageCopy.openEvent}
+                      </Link>
+                      {registration.paymentReceiptPreviewPath ? (
+                        <a
+                          href={getApiAssetUrl(registration.paymentReceiptPreviewPath) ?? undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-link ticket-open-link"
+                        >
+                          {deliveryCopy.openPreview}
+                        </a>
+                      ) : null}
+                      {registration.ticketAssetPath ? (
+                        <a
+                          href={getApiAssetUrl(registration.ticketAssetPath) ?? undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-link ticket-open-link"
+                        >
+                          {deliveryCopy.openTicket}
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               ))}

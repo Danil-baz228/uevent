@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsDateString, IsOptional } from 'class-validator';
+import { IsBoolean, IsDateString, IsOptional } from 'class-validator';
 
 export class UpdateRegistrationReminderDto {
   @IsOptional()
@@ -8,4 +8,19 @@ export class UpdateRegistrationReminderDto {
   )
   @IsDateString()
   reminderAt?: string | null;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') {
+      return true;
+    }
+
+    if (value === 'false') {
+      return false;
+    }
+
+    return value;
+  })
+  @IsBoolean()
+  showAttendeeName?: boolean;
 }

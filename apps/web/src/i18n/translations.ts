@@ -185,6 +185,17 @@ export type TranslationDictionary = {
     registrationConfirmed: string;
     noAttendees: string;
     attendeeNamesHidden: string;
+    organizerNotificationsEyebrow: string;
+    organizerNotificationsTitle: string;
+    organizerNotificationsText: (name: string) => string;
+    organizerNotificationsSignedOut: string;
+    organizerNotificationsActive: string;
+    subscribeToOrganizer: string;
+    unsubscribeFromOrganizer: string;
+    subscriptionSuccess: string;
+    unsubscriptionSuccess: string;
+    subscriptionFailed: string;
+    openOrganizerPage: string;
     noOrganizerEvents: string;
     noSimilarEvents: string;
     deleteFailed: string;
@@ -491,6 +502,18 @@ export const translations: Record<Language, TranslationDictionary> = {
       registrationConfirmed: 'You are already registered for this event.',
       noAttendees: 'No confirmed attendees yet.',
       attendeeNamesHidden: 'The organizer has hidden attendee names for this event.',
+      organizerNotificationsEyebrow: 'Organizer alerts',
+      organizerNotificationsTitle: 'Stay in the loop with this organizer',
+      organizerNotificationsText: (name) =>
+        `Subscribe to updates from ${name} so you notice new events and company announcements sooner.`,
+      organizerNotificationsSignedOut: 'Sign in to subscribe to organizer updates.',
+      organizerNotificationsActive: 'You are subscribed to this organizer now.',
+      subscribeToOrganizer: 'Subscribe to alerts',
+      unsubscribeFromOrganizer: 'Unsubscribe',
+      subscriptionSuccess: 'Organizer notifications are enabled.',
+      unsubscriptionSuccess: 'Organizer notifications are disabled.',
+      subscriptionFailed: 'Failed to update organizer notifications',
+      openOrganizerPage: 'Open organizer page',
       noOrganizerEvents: 'No other published events from this organizer yet.',
       noSimilarEvents: 'No similar events found yet.',
       deleteFailed: 'Failed to delete event',
@@ -730,6 +753,21 @@ export const translations: Record<Language, TranslationDictionary> = {
       registrationConfirmed: 'Ви вже зареєстровані на цю подію.',
       noAttendees: 'Підтверджених учасників поки немає.',
       attendeeNamesHidden: 'Організатор приховав імена учасників для цієї події.',
+      organizerNotificationsEyebrow: 'Сповіщення організатора',
+      organizerNotificationsTitle: 'Підпишіться на сповіщення від організатора події',
+      organizerNotificationsText: (name) =>
+        `Отримуйте нові події та оновлення від ${name}, щойно організатор щось опублікує.`,
+      organizerNotificationsSignedOut:
+        'Увійдіть, щоб підписатися на сповіщення організатора.',
+      organizerNotificationsActive:
+        'Ви вже підписані на сповіщення цього організатора.',
+      subscribeToOrganizer: 'Підписатися',
+      unsubscribeFromOrganizer: 'Відписатися',
+      subscriptionSuccess: 'Підписку на сповіщення організатора увімкнено.',
+      unsubscriptionSuccess: 'Підписку на сповіщення організатора вимкнено.',
+      subscriptionFailed:
+        'Не вдалося оновити підписку на сповіщення організатора',
+      openOrganizerPage: 'Відкрити сторінку організатора',
       noOrganizerEvents: 'Інших опублікованих подій цього організатора поки немає.',
       noSimilarEvents: 'Схожих подій поки не знайдено.',
       deleteFailed: 'Не вдалося видалити подію',
