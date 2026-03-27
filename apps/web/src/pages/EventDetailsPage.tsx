@@ -820,6 +820,19 @@ export function EventDetailsPage() {
       </section>
     );
   }
+  const isEventFinished = new Date(event.startsAt).getTime() < Date.now();
+  const eventFinishedTitle =
+    locale === "uk-UA"
+      ? "Ця подія вже завершилася."
+      : "This event has already ended.";
+  const eventFinishedText =
+    locale === "uk-UA"
+      ? "Реєстрація, покупка квитків і нагадування більше недоступні, тому що подія вже минула."
+      : "Registration, ticket purchase, and reminders are no longer available because the event is over.";
+  const organizerFinishedHint =
+    locale === "uk-UA"
+      ? "Подія вже завершилася, але ви все ще можете редагувати її та керувати налаштуваннями."
+      : "This event has already ended, but you can still edit it and manage its settings.";
   return (
     <section className="details-shell">
       {" "}
@@ -836,6 +849,8 @@ export function EventDetailsPage() {
             <p className="notice warning">
               {publicationCopy.banner(event.publishAt)}
             </p>
+          ) : isEventFinished ? (
+            <p className="notice warning">{eventFinishedTitle}</p>
           ) : null}{" "}
           <span className="pill">{translateCategory(event.category)}</span>{" "}
           <h1>{event.title}</h1>{" "}
@@ -871,6 +886,9 @@ export function EventDetailsPage() {
                 <p className="muted">
                   {copy.eventDetails.organizerSettingsText}
                 </p>{" "}
+                {isEventFinished ? (
+                  <p className="notice warning">{organizerFinishedHint}</p>
+                ) : null}{" "}
               </div>{" "}
             </div>{" "}
             <div className="settings-toggle-grid">
@@ -1484,7 +1502,9 @@ export function EventDetailsPage() {
             {copy.common.organizer}:{" "}
             {event.organizer?.displayName ?? copy.common.communityHost}{" "}
           </p>{" "}
-          {registration?.status === "confirmed" ? (
+          {isEventFinished && !isOrganizer ? (
+            <p className="notice warning">{eventFinishedText}</p>
+          ) : registration?.status === "confirmed" ? (
             <>
               {" "}
               <p className="notice success">

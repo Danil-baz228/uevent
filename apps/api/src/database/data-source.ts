@@ -26,6 +26,9 @@ import { AddCompanyNews1760000000013 } from './migrations/1760000000013-AddCompa
 import { AddEventAddress1760000000014 } from './migrations/1760000000014-AddEventAddress';
 import { AddEventPromoCodes1760000000015 } from './migrations/1760000000015-AddEventPromoCodes';
 import { AddEventRedirectAfterPurchase1760000000016 } from './migrations/1760000000016-AddEventRedirectAfterPurchase';
+import { AddCompanySubscriptions1760000000017 } from './migrations/1760000000017-AddCompanySubscriptions';
+import { AddRegistrationNameVisibility1760000000018 } from './migrations/1760000000018-AddRegistrationNameVisibility';
+import { AddPaymentReceiptArtifacts1760000000019 } from './migrations/1760000000019-AddPaymentReceiptArtifacts';
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -61,6 +64,9 @@ const dataSource = new DataSource({
     AddEventAddress1760000000014,
     AddEventPromoCodes1760000000015,
     AddEventRedirectAfterPurchase1760000000016,
+    AddCompanySubscriptions1760000000017,
+    AddRegistrationNameVisibility1760000000018,
+    AddPaymentReceiptArtifacts1760000000019,
   ],
   synchronize: false,
 });
