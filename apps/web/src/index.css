@@ -1428,6 +1428,12 @@ img {
   min-width: 180px;
 }
 
+.status-pill-ended {
+  border-color: rgba(196, 146, 34, 0.24);
+  background: rgba(255, 244, 228, 0.82);
+  color: var(--body-ink);
+}
+
 .pay-button {
   width: 100%;
   min-width: 180px;
@@ -1743,6 +1749,53 @@ img {
 
 .account-tickets-header {
   margin-top: 6px;
+}
+
+.account-subsection-header {
+  margin-top: 28px;
+}
+
+.admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.admin-action-card {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.notifications-inline-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.notifications-page-list {
+  gap: 14px;
+}
+
+.notification-item-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.notification-item-state {
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .account-settings-form {
@@ -2212,7 +2265,9 @@ img {
   .ticket-grid,
   .account-overview,
   .account-profile-grid,
-  .company-grid {
+  .company-grid,
+  .admin-dashboard-grid,
+  .admin-actions-grid {
     grid-template-columns: 1fr;
   }
 

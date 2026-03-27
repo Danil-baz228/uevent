@@ -4,18 +4,29 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
-  fetchCompanyById,
+  ApiEvent,
+  ApiNotification,
+  clearAllNotifications,
+  fetchMyNotifications,
   fetchMyRegistrations,
+  fetchMyScheduledEvents,
   formatEventDate,
   formatPrice,
   getApiAssetUrl,
   getEventPosterUrl,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
 } from '../lib/api';
 
 type TicketsStatus = 'loading' | 'success' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'error';
 type AccountSettingsTab = 'profile' | 'email' | 'password' | 'recovery';
-type AccountSectionTab = 'tickets' | 'companies' | 'publications';
+type AccountSectionTab =
+  | 'admin'
+  | 'events'
+  | 'notifications'
+  | 'tickets'
+  | 'companies';
 
 export function TicketsPage() {
   const {
@@ -35,14 +46,15 @@ export function TicketsPage() {
   const [registrations, setRegistrations] = useState<
     Awaited<ReturnType<typeof fetchMyRegistrations>>
   >([]);
+  const [scheduledEvents, setScheduledEvents] = useState<ApiEvent[]>([]);
+  const [eventsStatus, setEventsStatus] = useState<TicketsStatus>('loading');
+  const [eventsMessage, setEventsMessage] = useState('');
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [notificationsStatus, setNotificationsStatus] =
+    useState<TicketsStatus>('loading');
+  const [notificationsMessage, setNotificationsMessage] = useState('');
   const [activeSectionTab, setActiveSectionTab] =
-    useState<AccountSectionTab>('tickets');
-  const [companyPublications, setCompanyPublications] = useState<
-    Awaited<ReturnType<typeof fetchCompanyById>>[]
-  >([]);
-  const [publicationsStatus, setPublicationsStatus] =
-    useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [publicationsMessage, setPublicationsMessage] = useState('');
+    useState<AccountSectionTab>('admin');
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] =
@@ -284,10 +296,175 @@ export function TicketsPage() {
     [language],
   );
 
+  const tabCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            admin: 'Адмін панель',
+            events: 'Події користувача',
+            notifications: 'Сповіщення користувача',
+          }
+        : {
+            admin: 'Admin panel',
+            events: 'User events',
+            notifications: 'User notifications',
+          },
+    [language],
+  );
+
+  const adminCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            eyebrow: 'Адмін панель',
+            title: 'Керуйте профілем і контентом',
+            text: 'Це ваш центр керування: швидкі дії, основна статистика та доступ до подій, компаній і налаштувань.',
+            eventsCount: 'Події користувача',
+            companiesCount: 'Компанії',
+            unreadNotifications: 'Непрочитані сповіщення',
+            ticketsCount: 'Квитки',
+            createEvent: 'Створити подію',
+            openCompanies: 'Відкрити компанії',
+            openNotifications: 'Відкрити сповіщення',
+            openSettings: 'Відкрити налаштування',
+            latestEvents: 'Останні події',
+            noEvents: 'У вас ще немає подій. Створіть першу прямо з адмін-панелі.',
+            jumpToEvent: 'Відкрити подію',
+          }
+        : {
+            eyebrow: 'Admin panel',
+            title: 'Manage your profile and content',
+            text: 'This is your control center: quick actions, key stats, and shortcuts to events, companies, and settings.',
+            eventsCount: 'User events',
+            companiesCount: 'Companies',
+            unreadNotifications: 'Unread notifications',
+            ticketsCount: 'Tickets',
+            createEvent: 'Create event',
+            openCompanies: 'Open companies',
+            openNotifications: 'Open notifications',
+            openSettings: 'Open settings',
+            latestEvents: 'Latest events',
+            noEvents: 'You do not have any events yet. Create the first one from the admin panel.',
+            jumpToEvent: 'Open event',
+          },
+    [language],
+  );
+
+  const eventsCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            eyebrow: 'Мої події',
+            title: 'Події користувача',
+            text: 'Тут зібрані всі події, створені вами, із поточним статусом і швидким доступом до сторінки події.',
+            loading: 'Завантаження ваших подій...',
+            empty: 'Ви ще не створили жодної події.',
+            failed: 'Не вдалося завантажити події користувача.',
+            openEvent: 'Відкрити подію',
+            published: 'Опубліковано',
+            scheduled: 'Заплановано',
+            ended: 'Завершилась',
+          }
+        : {
+            eyebrow: 'My events',
+            title: 'User events',
+            text: 'All events created by you live here with their current status and a quick jump back to the event page.',
+            loading: 'Loading your events...',
+            empty: 'You have not created any events yet.',
+            failed: 'Failed to load user events.',
+            openEvent: 'Open event',
+            published: 'Published',
+            scheduled: 'Scheduled',
+            ended: 'Ended',
+          },
+    [language],
+  );
+
+  const notificationsPanelCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            eyebrow: 'Сповіщення',
+            title: 'Сповіщення користувача',
+            text: 'Тут зібрані всі ваші сповіщення: оплати, нові події, новини компаній і нагадування.',
+            loading: 'Завантаження сповіщень...',
+            empty: 'У вас ще немає сповіщень.',
+            failed: 'Не вдалося завантажити сповіщення.',
+            markAll: 'Прочитати все',
+            clearAll: 'Очистити все',
+            openEvent: 'Відкрити подію',
+            openCompany: 'Відкрити організатора',
+            openAccount: 'Відкрити акаунт',
+            unread: 'Непрочитане',
+            read: 'Прочитане',
+          }
+        : {
+            eyebrow: 'Notifications',
+            title: 'User notifications',
+            text: 'All your notifications live here: payments, new events, company updates, and reminders.',
+            loading: 'Loading notifications...',
+            empty: 'You do not have any notifications yet.',
+            failed: 'Failed to load notifications.',
+            markAll: 'Mark all as read',
+            clearAll: 'Clear all',
+            openEvent: 'Open event',
+            openCompany: 'Open organizer',
+            openAccount: 'Open account',
+            unread: 'Unread',
+            read: 'Read',
+          },
+    [language],
+  );
+
+  const notificationContentCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            organizer: 'Організатор',
+            someone: 'Хтось',
+            registrationConfirmed: (eventTitle: string) =>
+              `Ви успішно зареєструвалися на подію ${eventTitle}.`,
+            paymentConfirmed: (eventTitle: string) =>
+              `Ваш квиток на подію ${eventTitle} підтверджено.`,
+            newAttendee: (actorName: string, eventTitle: string) =>
+              `${actorName} зареєструвався на подію ${eventTitle}.`,
+            newComment: (actorName: string, eventTitle: string) =>
+              `${actorName} залишив коментар до події ${eventTitle}.`,
+            reminder: (eventTitle: string) =>
+              `Незабаром починається подія ${eventTitle}. Перевірте час і не пропустіть її.`,
+            companyNews: (companyName: string, newsTitle: string) =>
+              `${companyName} поділився оновленням: ${newsTitle}.`,
+            companyEvent: (companyName: string, eventTitle: string) =>
+              `${companyName} опублікував нову подію ${eventTitle}.`,
+          }
+        : {
+            organizer: 'Organizer',
+            someone: 'Someone',
+            registrationConfirmed: (eventTitle: string) =>
+              `You are registered for ${eventTitle}.`,
+            paymentConfirmed: (eventTitle: string) =>
+              `Your ticket for ${eventTitle} is confirmed.`,
+            newAttendee: (actorName: string, eventTitle: string) =>
+              `${actorName} registered for ${eventTitle}.`,
+            newComment: (actorName: string, eventTitle: string) =>
+              `${actorName} commented on ${eventTitle}.`,
+            reminder: (eventTitle: string) =>
+              `${eventTitle} is coming up soon. Check the time and do not miss it.`,
+            companyNews: (companyName: string, newsTitle: string) =>
+              `${companyName} shared an update: ${newsTitle}.`,
+            companyEvent: (companyName: string, eventTitle: string) =>
+              `${companyName} published a new event: ${eventTitle}.`,
+          },
+    [language],
+  );
+
   const confirmedCount = registrations.filter(
     (registration) => registration.status === 'confirmed',
   ).length;
   const pendingCount = registrations.length - confirmedCount;
+  const unreadNotificationsCount = notifications.filter(
+    (notification) => !notification.isRead,
+  ).length;
   const memberSinceLabel = new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
   }).format(new Date(user?.createdAt ?? Date.now()));
@@ -346,49 +523,92 @@ export function TicketsPage() {
   useEffect(() => {
     let active = true;
 
-    async function loadCompanyPublications() {
-      if (!token || !user || user.companies.length === 0) {
+    async function loadScheduledEvents() {
+      if (!token) {
         if (active) {
-          setCompanyPublications([]);
-          setPublicationsStatus('success');
-          setPublicationsMessage('');
+          setScheduledEvents([]);
+          setEventsStatus('success');
+          setEventsMessage('');
         }
         return;
       }
 
-      setPublicationsStatus('loading');
-      setPublicationsMessage('');
+      setEventsStatus('loading');
+      setEventsMessage('');
 
       try {
-        const payload = await Promise.all(
-          user.companies.map((company) => fetchCompanyById(company.id, token)),
-        );
+        const payload = await fetchMyScheduledEvents(token);
 
         if (!active) {
           return;
         }
 
-        setCompanyPublications(payload);
-        setPublicationsStatus('success');
+        setScheduledEvents(payload);
+        setEventsStatus('success');
       } catch (error) {
         if (!active) {
           return;
         }
 
-        setCompanyPublications([]);
-        setPublicationsStatus('error');
-        setPublicationsMessage(
-          error instanceof Error ? error.message : sectionCopy.publicationsFailed,
+        setScheduledEvents([]);
+        setEventsStatus('error');
+        setEventsMessage(
+          error instanceof Error ? error.message : eventsCopy.failed,
         );
       }
     }
 
-    void loadCompanyPublications();
+    void loadScheduledEvents();
 
     return () => {
       active = false;
     };
-  }, [sectionCopy.publicationsFailed, token, user]);
+  }, [eventsCopy.failed, token]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadNotifications() {
+      if (!token) {
+        if (active) {
+          setNotifications([]);
+          setNotificationsStatus('success');
+          setNotificationsMessage('');
+        }
+        return;
+      }
+
+      setNotificationsStatus('loading');
+      setNotificationsMessage('');
+
+      try {
+        const payload = await fetchMyNotifications(token);
+
+        if (!active) {
+          return;
+        }
+
+        setNotifications(payload);
+        setNotificationsStatus('success');
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setNotifications([]);
+        setNotificationsStatus('error');
+        setNotificationsMessage(
+          error instanceof Error ? error.message : notificationsPanelCopy.failed,
+        );
+      }
+    }
+
+    void loadNotifications();
+
+    return () => {
+      active = false;
+    };
+  }, [notificationsPanelCopy.failed, token]);
 
   useEffect(() => {
     if (!location.state || typeof location.state !== 'object') {
@@ -425,6 +645,138 @@ export function TicketsPage() {
     setEmailMessage('');
     setPasswordStatus('idle');
     setPasswordMessage('');
+  }
+
+  function getNotificationDestination(notification: ApiNotification) {
+    if (notification.eventId) {
+      return `/events/${notification.eventId}`;
+    }
+
+    if (notification.companyId) {
+      return `/companies/${notification.companyId}`;
+    }
+
+    return '/account';
+  }
+
+  function getNotificationActionLabel(notification: ApiNotification) {
+    const destination = getNotificationDestination(notification);
+
+    if (destination === '/account') {
+      return notificationsPanelCopy.openAccount;
+    }
+
+    if (destination.startsWith('/companies/')) {
+      return notificationsPanelCopy.openCompany;
+    }
+
+    return notificationsPanelCopy.openEvent;
+  }
+
+  function localizeNotification(notification: ApiNotification) {
+    const extractEventTitle = () =>
+      notification.body.match(
+        /(registered for|ticket for|commented on|published a new event:)\s(.+?)(?:\.|$)/,
+      )?.[2] ?? notification.body;
+    const extractCompanyName = () =>
+      notification.body.match(/^(.+?)\s(shared update:|published a new event:)/)?.[1] ??
+      notificationContentCopy.organizer;
+    const extractNewsTitle = () =>
+      notification.body.match(/^.+ shared update:\s(.+?)(?:\.|$)/)?.[1] ??
+      notification.body;
+    const extractActorName = () =>
+      notification.body.match(/^(.+?)\s(registered for|commented on)/)?.[1] ??
+      notificationContentCopy.someone;
+
+    switch (notification.type) {
+      case 'registration_confirmed':
+        return {
+          title: notification.title,
+          body: notificationContentCopy.registrationConfirmed(extractEventTitle()),
+        };
+      case 'payment_confirmed':
+        return {
+          title: notification.title,
+          body: notificationContentCopy.paymentConfirmed(extractEventTitle()),
+        };
+      case 'new_attendee':
+        return {
+          title: notification.title,
+          body: notificationContentCopy.newAttendee(
+            extractActorName(),
+            extractEventTitle(),
+          ),
+        };
+      case 'new_comment':
+        return {
+          title: notification.title,
+          body: notificationContentCopy.newComment(
+            extractActorName(),
+            extractEventTitle(),
+          ),
+        };
+      case 'event_reminder':
+        return {
+          title: notification.title,
+          body: notificationContentCopy.reminder(extractEventTitle()),
+        };
+      case 'company_news':
+        return {
+          title: notification.title,
+          body: notificationContentCopy.companyNews(
+            extractCompanyName(),
+            extractNewsTitle(),
+          ),
+        };
+      case 'company_event':
+        return {
+          title: notification.title,
+          body: notificationContentCopy.companyEvent(
+            extractCompanyName(),
+            extractEventTitle(),
+          ),
+        };
+      default:
+        return {
+          title: notification.title,
+          body: notification.body,
+        };
+    }
+  }
+
+  async function handleOpenNotification(notification: ApiNotification) {
+    if (token && !notification.isRead) {
+      try {
+        const updated = await markNotificationAsRead(notification.id, token);
+        setNotifications((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
+      } catch {
+        // Keep navigation working even if read-state update fails.
+      }
+    }
+
+    navigate(getNotificationDestination(notification));
+  }
+
+  async function handleMarkAllNotificationsRead() {
+    if (!token) {
+      return;
+    }
+
+    await markAllNotificationsAsRead(token);
+    setNotifications((current) =>
+      current.map((notification) => ({ ...notification, isRead: true })),
+    );
+  }
+
+  async function handleClearNotifications() {
+    if (!token) {
+      return;
+    }
+
+    await clearAllNotifications(token);
+    setNotifications([]);
   }
 
   return (
@@ -505,6 +857,27 @@ export function TicketsPage() {
       <div className="settings-toggle-grid account-section-tabs">
         <button
           type="button"
+          className={`settings-tile ${activeSectionTab === 'admin' ? 'active' : ''}`}
+          onClick={() => setActiveSectionTab('admin')}
+        >
+          <strong>{tabCopy.admin}</strong>
+        </button>
+        <button
+          type="button"
+          className={`settings-tile ${activeSectionTab === 'events' ? 'active' : ''}`}
+          onClick={() => setActiveSectionTab('events')}
+        >
+          <strong>{tabCopy.events}</strong>
+        </button>
+        <button
+          type="button"
+          className={`settings-tile ${activeSectionTab === 'notifications' ? 'active' : ''}`}
+          onClick={() => setActiveSectionTab('notifications')}
+        >
+          <strong>{tabCopy.notifications}</strong>
+        </button>
+        <button
+          type="button"
           className={`settings-tile ${activeSectionTab === 'tickets' ? 'active' : ''}`}
           onClick={() => setActiveSectionTab('tickets')}
         >
@@ -517,14 +890,224 @@ export function TicketsPage() {
         >
           <strong>{sectionCopy.companies}</strong>
         </button>
-        <button
-          type="button"
-          className={`settings-tile ${activeSectionTab === 'publications' ? 'active' : ''}`}
-          onClick={() => setActiveSectionTab('publications')}
-        >
-          <strong>{sectionCopy.publications}</strong>
-        </button>
       </div>
+
+      {activeSectionTab === 'admin' ? (
+        <>
+          <div className="section-header section-header-panel account-tickets-header">
+            <span className="eyebrow">{adminCopy.eyebrow}</span>
+            <h2>{adminCopy.title}</h2>
+            <p>{adminCopy.text}</p>
+          </div>
+
+          <div className="admin-dashboard-grid">
+            <article className="account-stat-card">
+              <span>{adminCopy.eventsCount}</span>
+              <strong>{scheduledEvents.length}</strong>
+            </article>
+            <article className="account-stat-card">
+              <span>{adminCopy.companiesCount}</span>
+              <strong>{user.companies.length}</strong>
+            </article>
+            <article className="account-stat-card">
+              <span>{adminCopy.unreadNotifications}</span>
+              <strong>{unreadNotificationsCount}</strong>
+            </article>
+            <article className="account-stat-card">
+              <span>{adminCopy.ticketsCount}</span>
+              <strong>{registrations.length}</strong>
+            </article>
+          </div>
+
+          <div className="admin-actions-grid">
+            <Link to="/create-event" className="related-card admin-action-card">
+              <strong>{adminCopy.createEvent}</strong>
+              <span className="muted">{copy.nav.createEvent}</span>
+            </Link>
+            <button
+              type="button"
+              className="related-card admin-action-card"
+              onClick={() => setActiveSectionTab('companies')}
+            >
+              <strong>{adminCopy.openCompanies}</strong>
+              <span className="muted">{pageCopy.companiesTitle}</span>
+            </button>
+            <button
+              type="button"
+              className="related-card admin-action-card"
+              onClick={() => setActiveSectionTab('notifications')}
+            >
+              <strong>{adminCopy.openNotifications}</strong>
+              <span className="muted">{notificationsPanelCopy.title}</span>
+            </button>
+            <button
+              type="button"
+              className="related-card admin-action-card"
+              onClick={() => {
+                setSettingsOpen(true);
+                setActiveSettingsTab('profile');
+                resetModalFeedback();
+              }}
+            >
+              <strong>{adminCopy.openSettings}</strong>
+              <span className="muted">{pageCopy.settingsTitle}</span>
+            </button>
+          </div>
+
+          <div className="section-header section-header-panel account-tickets-header account-subsection-header">
+            <span className="eyebrow">{adminCopy.latestEvents}</span>
+            <h2>{eventsCopy.title}</h2>
+          </div>
+
+          {scheduledEvents.length === 0 ? (
+            <p className="notice">{adminCopy.noEvents}</p>
+          ) : (
+            <div className="related-list">
+              {scheduledEvents.slice(0, 3).map((event) => (
+                <Link key={event.id} to={`/events/${event.id}`} className="related-card">
+                  <strong>{event.title}</strong>
+                  <span className="muted">
+                    {event.city} / {formatEventDate(event.startsAt, locale)}
+                  </span>
+                  <span>{adminCopy.jumpToEvent}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
+      ) : null}
+
+      {activeSectionTab === 'events' ? (
+        <>
+          <div className="section-header section-header-panel account-tickets-header">
+            <span className="eyebrow">{eventsCopy.eyebrow}</span>
+            <h2>{eventsCopy.title}</h2>
+            <p>{eventsCopy.text}</p>
+          </div>
+
+          {eventsStatus === 'loading' ? <p className="notice">{eventsCopy.loading}</p> : null}
+          {eventsStatus === 'error' ? <p className="notice error">{eventsMessage}</p> : null}
+          {eventsStatus === 'success' && scheduledEvents.length === 0 ? (
+            <p className="notice">{eventsCopy.empty}</p>
+          ) : null}
+
+          {scheduledEvents.length > 0 ? (
+            <div className="ticket-grid">
+              {scheduledEvents.map((event) => {
+                const isEventEnded = new Date(event.startsAt).getTime() < Date.now();
+                const eventStatusLabel = !event.isPublished
+                  ? eventsCopy.scheduled
+                  : isEventEnded
+                    ? eventsCopy.ended
+                    : eventsCopy.published;
+
+                return (
+                  <article key={event.id} className="ticket-card">
+                    <img
+                      src={getEventPosterUrl(event)}
+                      alt={`${event.title} poster`}
+                      className="ticket-poster"
+                    />
+                    <div className="ticket-copy">
+                      <div className="ticket-topline">
+                        <span className="pill ticket-status">{eventStatusLabel}</span>
+                        <span className="pill">{translateCategory(event.category)}</span>
+                      </div>
+                      <h3>{event.title}</h3>
+                      <p>
+                        {event.city} / {formatEventDate(event.startsAt, locale)}
+                      </p>
+                      <div className="ticket-meta-row">
+                        <span className="ticket-price">
+                          {formatPrice(event.price, locale, copy.common.free)}
+                        </span>
+                      </div>
+                      <div className="ticket-actions">
+                        <Link to={`/events/${event.id}`} className="inline-link ticket-open-link">
+                          {eventsCopy.openEvent}
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {activeSectionTab === 'notifications' ? (
+        <>
+          <div className="section-header section-header-panel account-tickets-header">
+            <span className="eyebrow">{notificationsPanelCopy.eyebrow}</span>
+            <h2>{notificationsPanelCopy.title}</h2>
+            <p>{notificationsPanelCopy.text}</p>
+          </div>
+
+          <div className="notifications-inline-actions">
+            <button
+              type="button"
+              className="notifications-mark-all footer"
+              onClick={() => void handleMarkAllNotificationsRead()}
+              disabled={notifications.length === 0}
+            >
+              {notificationsPanelCopy.markAll}
+            </button>
+            <button
+              type="button"
+              className="notifications-clear-all footer"
+              onClick={() => void handleClearNotifications()}
+              disabled={notifications.length === 0}
+            >
+              {notificationsPanelCopy.clearAll}
+            </button>
+          </div>
+
+          {notificationsStatus === 'loading' ? (
+            <p className="notice">{notificationsPanelCopy.loading}</p>
+          ) : null}
+          {notificationsStatus === 'error' ? (
+            <p className="notice error">{notificationsMessage}</p>
+          ) : null}
+          {notificationsStatus === 'success' && notifications.length === 0 ? (
+            <p className="notice">{notificationsPanelCopy.empty}</p>
+          ) : null}
+
+          {notifications.length > 0 ? (
+            <div className="notifications-modal-list notifications-page-list">
+              {notifications.map((notification) => {
+                const localizedNotification = localizeNotification(notification);
+
+                return (
+                  <div
+                    key={notification.id}
+                    className={`notification-item ${
+                      notification.isRead ? 'read' : 'unread'
+                    }`}
+                  >
+                    <div className="notification-item-copy">
+                      <strong>{localizedNotification.title}</strong>
+                      <p>{localizedNotification.body}</p>
+                      <span className="muted notification-item-state">
+                        {notification.isRead
+                          ? notificationsPanelCopy.read
+                          : notificationsPanelCopy.unread}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="notification-open"
+                      onClick={() => void handleOpenNotification(notification)}
+                    >
+                      {getNotificationActionLabel(notification)}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </>
+      ) : null}
 
       {activeSectionTab === 'companies' ? (
         <>
@@ -659,79 +1242,6 @@ export function TicketsPage() {
                         </a>
                       ) : null}
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : null}
-        </>
-      ) : null}
-
-      {activeSectionTab === 'publications' ? (
-        <>
-          <div className="section-header section-header-panel account-tickets-header">
-            <span className="eyebrow">{sectionCopy.publicationsEyebrow}</span>
-            <h2>{sectionCopy.publicationsTitle}</h2>
-            <p>{sectionCopy.publicationsText}</p>
-          </div>
-
-          {publicationsStatus === 'loading' ? (
-            <p className="notice">{sectionCopy.publicationsLoading}</p>
-          ) : null}
-          {publicationsStatus === 'error' ? (
-            <p className="notice error">
-              {publicationsMessage || sectionCopy.publicationsFailed}
-            </p>
-          ) : null}
-          {publicationsStatus === 'success' &&
-          companyPublications.every(
-            (company) => company.events.length === 0 && company.news.length === 0,
-          ) ? (
-            <p className="notice">{sectionCopy.noPublications}</p>
-          ) : null}
-
-          {companyPublications.length > 0 ? (
-            <div className="card-grid">
-              {companyPublications.map((company) => (
-                <article key={company.id} className="event-card company-card">
-                  <div className="company-card-topline">
-                    <span className="pill">{company.location}</span>
-                    <Link to={`/companies/${company.id}`} className="inline-link company-open-link">
-                      {pageCopy.openCompany}
-                    </Link>
-                  </div>
-
-                  <h3>{company.name}</h3>
-
-                  <div className="company-news-preview">
-                    <strong>{sectionCopy.latestNews}</strong>
-                    {company.news[0] ? (
-                      <>
-                        <span className="muted">
-                          {formatEventDate(company.news[0].createdAt, locale)}
-                        </span>
-                        <p>{company.news[0].title}</p>
-                      </>
-                    ) : (
-                      <p>{sectionCopy.noCompanyNews}</p>
-                    )}
-                  </div>
-
-                  <div className="company-news-preview">
-                    <strong>{sectionCopy.companyEvents}</strong>
-                    {company.events.length > 0 ? (
-                      company.events.slice(0, 2).map((event) => (
-                        <Link
-                          key={event.id}
-                          to={`/events/${event.id}`}
-                          className="inline-link company-open-link"
-                        >
-                          {event.title}
-                        </Link>
-                      ))
-                    ) : (
-                      <p>{sectionCopy.noCompanyEvents}</p>
-                    )}
                   </div>
                 </article>
               ))}

@@ -44,6 +44,7 @@ export class RegistrationsService {
       }
 
       this.ensureEventIsPublished(event);
+      this.ensureEventIsNotFinished(event.startsAt);
 
       if (Number(event.price) > 0) {
         throw new BadRequestException(
@@ -94,6 +95,7 @@ export class RegistrationsService {
     }
 
     this.ensureEventIsPublished(event);
+    this.ensureEventIsNotFinished(event.startsAt);
 
     if (Number(event.price) > 0) {
       throw new BadRequestException(
@@ -270,6 +272,7 @@ export class RegistrationsService {
       }
 
       this.ensureEventIsPublished(event);
+      this.ensureEventIsNotFinished(event.startsAt);
       return event;
     }
 
@@ -283,6 +286,7 @@ export class RegistrationsService {
     }
 
     this.ensureEventIsPublished(event);
+    this.ensureEventIsNotFinished(event.startsAt);
     return event;
   }
 
@@ -300,6 +304,7 @@ export class RegistrationsService {
       }
 
       this.ensureEventIsPublished(event);
+      this.ensureEventIsNotFinished(event.startsAt);
 
       const eventPrice = Number(event.price);
 
@@ -346,6 +351,7 @@ export class RegistrationsService {
     }
 
     this.ensureEventIsPublished(event);
+    this.ensureEventIsNotFinished(event.startsAt);
 
     const eventPrice = Number(event.price);
 
@@ -614,5 +620,15 @@ export class RegistrationsService {
     }
 
     throw new NotFoundException(`Event ${event.id} was not found`);
+  }
+
+  private ensureEventIsNotFinished(startsAt: Date) {
+    if (startsAt.getTime() >= Date.now()) {
+      return;
+    }
+
+    throw new BadRequestException(
+      'Registrations and ticket purchases are unavailable for events that have already ended',
+    );
   }
 }

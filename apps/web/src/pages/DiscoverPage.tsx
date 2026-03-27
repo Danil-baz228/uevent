@@ -60,6 +60,14 @@ export function DiscoverPage() {
           sortPriceAsc: 'Price: low to high',
           sortPriceDesc: 'Price: high to low',
         };
+  const eventStateCopy =
+    locale === 'uk-UA'
+      ? {
+          ended: 'Подія завершилась',
+        }
+      : {
+          ended: 'Event ended',
+        };
 
   useEffect(() => {
     let active = true;
@@ -255,8 +263,12 @@ export function DiscoverPage() {
         {status === 'success' && events.length === 0 ? (
           <p className="notice">{copy.discover.noEvents}</p>
         ) : null}
-        {events.map((event) => (
-          <article key={event.id} className="list-card">
+        {events.map((event) => {
+          const registration = getRegistration(event.id);
+          const isEventFinished = new Date(event.startsAt).getTime() < Date.now();
+
+          return (
+            <article key={event.id} className="list-card">
             <div className="list-card-main">
               <img
                 src={getEventPosterUrl(event)}
@@ -292,10 +304,14 @@ export function DiscoverPage() {
                 <strong>{formatPrice(event.price, locale, copy.common.free)}</strong>
                 <span>{event.capacity} {copy.common.spots}</span>
               </div>
-              {getRegistration(event.id)?.status === 'confirmed' ? (
+              {registration?.status === 'confirmed' ? (
                 <span className="pill status-pill">{copy.common.registered}</span>
-              ) : getRegistration(event.id)?.status === 'pending_payment' ? (
+              ) : registration?.status === 'pending_payment' ? (
                 <span className="pill status-pill">{copy.common.paymentPending}</span>
+              ) : isEventFinished ? (
+                <span className="pill status-pill status-pill-ended">
+                  {eventStateCopy.ended}
+                </span>
               ) : event.price > 0 ? (
                 <Link to={`/events/${event.id}`} className="primary-button pay-button">
                   {copy.common.buyTicket}
@@ -313,8 +329,9 @@ export function DiscoverPage() {
                 </button>
               )}
             </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       {meta && meta.totalPages > 1 ? (
