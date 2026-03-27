@@ -61,5 +61,12 @@ export function validateEnvironment(config: RawEnv) {
     SMTP_SECURE: String(config.SMTP_SECURE ?? 'false'),
     SMTP_USER: getOptionalString(config, 'SMTP_USER'),
     SMTP_PASS: getOptionalString(config, 'SMTP_PASS'),
+    GOOGLE_CLIENT_ID: getOptionalString(config, 'GOOGLE_CLIENT_ID'),
+    GOOGLE_CLIENT_SECRET: getOptionalString(config, 'GOOGLE_CLIENT_SECRET'),
+    GOOGLE_CALLBACK_URL: getString(
+      config,
+      'GOOGLE_CALLBACK_URL',
+      'http://localhost:4000/api/auth/google/callback',
+    ),
   };
 }

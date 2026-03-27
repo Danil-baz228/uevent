@@ -1,5 +1,6 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 
 import { CurrentUser } from './current-user.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -14,7 +15,10 @@ import { AuthService } from './auth.service';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
@@ -24,6 +28,45 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Get('google/login')
+  googleLogin(@Res() res: any) {
+    res.redirect(this.authService.getGoogleAuthUrl());
+  }
+
+  @Get('google/callback')
+  async googleCallback(
+    @Query('code') code: string | undefined,
+    @Res() res: any,
+  ) {
+    const appOrigin =
+      this.configService
+        .get<string>('APP_ORIGIN', 'http://localhost:5173')
+        .split(',')[0]
+        ?.trim() || 'http://localhost:5173';
+
+    if (!code) {
+      res.redirect(`${appOrigin}/auth?googleError=missing_code`);
+      return;
+    }
+
+    try {
+      const payload = await this.authService.loginWithGoogle(code);
+      const redirectUrl = new URL('/auth', appOrigin);
+
+      redirectUrl.searchParams.set('social', 'google');
+      redirectUrl.searchParams.set('accessToken', payload.accessToken);
+      redirectUrl.searchParams.set('refreshToken', payload.refreshToken);
+      redirectUrl.searchParams.set(
+        'user',
+        Buffer.from(JSON.stringify(payload.user), 'utf8').toString('base64url'),
+      );
+
+      res.redirect(redirectUrl.toString());
+    } catch {
+      res.redirect(`${appOrigin}/auth?googleError=auth_failed`);
+    }
   }
 
   @Post('refresh')

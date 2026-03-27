@@ -1,19 +1,78 @@
-import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { FormEvent, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { AuthResponse, getGoogleLoginUrl } from '../lib/api';
 
 export function AuthPage() {
-  const { isReady, user, login, register } = useAuth();
-  const { copy } = useLanguage();
+  const { isReady, user, login, register, applyAuthResponse } = useAuth();
+  const { copy, locale } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const googleCopy =
+    locale === 'uk-UA'
+      ? {
+          action: 'Продовжити через Google',
+          processing: 'Завершуємо вхід через Google...',
+          failed: 'Не вдалося увійти через Google',
+          divider: 'або',
+        }
+      : {
+          action: 'Continue with Google',
+          processing: 'Completing Google sign-in...',
+          failed: 'Failed to sign in with Google',
+          divider: 'or',
+        };
+
+  function decodeBase64Url(value: string) {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded =
+      normalized + '='.repeat((4 - (normalized.length % 4 || 4)) % 4);
+    return atob(padded);
+  }
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const accessToken = params.get('accessToken');
+    const refreshToken = params.get('refreshToken');
+    const userPayload = params.get('user');
+    const googleError = params.get('googleError');
+
+    if (googleError) {
+      setStatus('error');
+      setMessage(googleCopy.failed);
+      navigate('/auth', { replace: true });
+      return;
+    }
+
+    if (!accessToken || !refreshToken || !userPayload) {
+      return;
+    }
+
+    try {
+      const decodedUser = JSON.parse(
+        decodeBase64Url(userPayload),
+      ) as AuthResponse['user'];
+
+      applyAuthResponse({
+        accessToken,
+        refreshToken,
+        user: decodedUser,
+      });
+      navigate('/create-event', { replace: true });
+    } catch {
+      setStatus('error');
+      setMessage(googleCopy.failed);
+      navigate('/auth', { replace: true });
+    }
+  }, [applyAuthResponse, googleCopy.failed, location.search, navigate]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,6 +143,22 @@ export function AuthPage() {
         </div>
 
         <form className="form-card auth-form" onSubmit={handleSubmit}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              setStatus('saving');
+              setMessage(googleCopy.processing);
+              window.location.href = getGoogleLoginUrl();
+            }}
+          >
+            {googleCopy.action}
+          </button>
+
+          <div className="auth-divider">
+            <span>{googleCopy.divider}</span>
+          </div>
+
           {mode === 'register' ? (
             <label className="field">
               <span>{copy.auth.displayName}</span>

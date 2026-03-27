@@ -5,7 +5,9 @@ import {
   Optional,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
 
 import { CompanyEntity } from '../companies/entities/company.entity';
@@ -29,6 +31,7 @@ import {
 @Injectable()
 export class AuthService {
   constructor(
+    private readonly configService: ConfigService,
     private readonly inMemoryData: InMemoryDataService,
     @Optional()
     @InjectRepository(UserEntity)
@@ -37,6 +40,157 @@ export class AuthService {
     @InjectRepository(CompanyEntity)
     private readonly companiesRepository: Repository<CompanyEntity> | undefined,
   ) {}
+
+  getGoogleAuthUrl() {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const callbackUrl = this.configService.get<string>('GOOGLE_CALLBACK_URL');
+
+    if (!clientId) {
+      throw new BadRequestException('Google OAuth is not configured');
+    }
+
+    const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    url.searchParams.set('client_id', clientId);
+    url.searchParams.set('redirect_uri', callbackUrl ?? 'http://localhost:4000/api/auth/google/callback');
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', 'openid email profile');
+    url.searchParams.set('access_type', 'offline');
+    url.searchParams.set('prompt', 'consent');
+
+    return url.toString();
+  }
+
+  async loginWithGoogle(code: string) {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
+    const callbackUrl = this.configService.get<string>('GOOGLE_CALLBACK_URL');
+
+    if (!clientId || !clientSecret) {
+      throw new BadRequestException('Google OAuth is not configured');
+    }
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: callbackUrl ?? 'http://localhost:4000/api/auth/google/callback',
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new UnauthorizedException('Google token exchange failed');
+    }
+
+    const tokenPayload = (await tokenResponse.json()) as {
+      access_token?: string;
+    };
+
+    if (!tokenPayload.access_token) {
+      throw new UnauthorizedException('Google access token was not returned');
+    }
+
+    const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${tokenPayload.access_token}`,
+      },
+    });
+
+    if (!profileResponse.ok) {
+      throw new UnauthorizedException('Google profile request failed');
+    }
+
+    const profile = (await profileResponse.json()) as {
+      email?: string;
+      name?: string;
+      given_name?: string;
+    };
+
+    if (!profile.email) {
+      throw new UnauthorizedException('Google account email was not returned');
+    }
+
+    const email = profile.email.toLowerCase().trim();
+    const displayName =
+      profile.name?.trim() || profile.given_name?.trim() || email.split('@')[0]!;
+
+    if (!this.usersRepository) {
+      let user = this.inMemoryData.findUserByEmail(email);
+
+      if (!user) {
+        user = this.inMemoryData.createUser({
+          email,
+          displayName,
+          passwordHash: hashPassword(randomUUID()),
+          interests: ['networking', 'community', 'events'],
+        });
+      }
+
+      const refreshToken = createRefreshToken({
+        sub: user.id,
+        email: user.email,
+      });
+
+      this.inMemoryData.updateUser(user.id, {
+        displayName: user.displayName || displayName,
+        refreshTokenHash: hashToken(refreshToken),
+      });
+
+      const savedUser = this.inMemoryData.findUserById(user.id) ?? user;
+
+      return {
+        accessToken: createAccessToken({
+          sub: savedUser.id,
+          email: savedUser.email,
+        }),
+        refreshToken,
+        user: await this.serializeUser(savedUser),
+      };
+    }
+
+    let user = await this.usersRepository.findOne({
+      where: { email },
+      relations: { companies: true },
+    });
+
+    if (!user) {
+      user = await this.usersRepository.save(
+        this.usersRepository.create({
+          email,
+          displayName,
+          passwordHash: hashPassword(randomUUID()),
+          interests: ['networking', 'community', 'events'],
+        }),
+      );
+    }
+
+    const refreshToken = createRefreshToken({
+      sub: user.id,
+      email: user.email,
+    });
+
+    user.refreshTokenHash = hashToken(refreshToken);
+
+    if (!user.displayName?.trim()) {
+      user.displayName = displayName;
+    }
+
+    const savedUser = await this.usersRepository.save(user);
+
+    return {
+      accessToken: createAccessToken({
+        sub: savedUser.id,
+        email: savedUser.email,
+      }),
+      refreshToken,
+      user: await this.serializeUser(savedUser),
+    };
+  }
 
   async register(dto: RegisterDto) {
     if (!this.usersRepository) {

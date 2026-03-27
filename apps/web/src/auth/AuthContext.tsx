@@ -38,6 +38,7 @@ type AuthContextValue = {
   reloadUser: () => Promise<void>;
   changeEmail: (payload: ChangeEmailPayload) => Promise<void>;
   changePassword: (payload: ChangePasswordPayload) => Promise<string>;
+  applyAuthResponse: (payload: AuthResponse) => void;
 };
 
 type StoredSession = {
@@ -65,7 +66,7 @@ function readStoredSession(): StoredSession | null {
   }
 }
 
-function persistSession(payload: AuthResponse) {
+  function persistSession(payload: AuthResponse) {
   const session: StoredSession = {
     token: payload.accessToken,
     refreshToken: payload.refreshToken,
@@ -151,6 +152,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const payload = await request;
     const session = persistSession(payload);
 
+    setToken(session.token);
+    setUser(session.user);
+  }
+
+  function applyAuthResponse(payload: AuthResponse) {
+    const session = persistSession(payload);
     setToken(session.token);
     setUser(session.user);
   }
@@ -253,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       reloadUser,
       changeEmail,
       changePassword,
+      applyAuthResponse,
     }),
     [isReady, token, user],
   );

@@ -7,6 +7,7 @@ import {
   ApiEvent,
   ApiNotification,
   clearAllNotifications,
+  fetchCompanyById,
   fetchMyNotifications,
   fetchMyRegistrations,
   fetchMyScheduledEvents,
@@ -21,6 +22,10 @@ import {
 type TicketsStatus = 'loading' | 'success' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'error';
 type AccountSettingsTab = 'profile' | 'email' | 'password' | 'recovery';
+type AccountEventSummary = Pick<
+  ApiEvent,
+  'id' | 'title' | 'city' | 'startsAt' | 'publishAt' | 'isPublished' | 'price' | 'posterUrl' | 'category'
+>;
 type AccountSectionTab =
   | 'admin'
   | 'events'
@@ -46,7 +51,7 @@ export function TicketsPage() {
   const [registrations, setRegistrations] = useState<
     Awaited<ReturnType<typeof fetchMyRegistrations>>
   >([]);
-  const [scheduledEvents, setScheduledEvents] = useState<ApiEvent[]>([]);
+  const [scheduledEvents, setScheduledEvents] = useState<AccountEventSummary[]>([]);
   const [eventsStatus, setEventsStatus] = useState<TicketsStatus>('loading');
   const [eventsMessage, setEventsMessage] = useState('');
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
@@ -537,7 +542,48 @@ export function TicketsPage() {
       setEventsMessage('');
 
       try {
-        const payload = await fetchMyScheduledEvents(token);
+        const ownedCompanies = user?.companies ?? [];
+        const [scheduledPayload, ...companyPayloads] = await Promise.all([
+          fetchMyScheduledEvents(token),
+          ...ownedCompanies.map((company) => fetchCompanyById(company.id, token)),
+        ]);
+
+        const mergedEvents = new Map<string, AccountEventSummary>();
+
+        scheduledPayload.forEach((event) => {
+          mergedEvents.set(event.id, {
+            id: event.id,
+            title: event.title,
+            city: event.city,
+            startsAt: event.startsAt,
+            publishAt: event.publishAt,
+            isPublished: event.isPublished,
+            price: event.price,
+            posterUrl: event.posterUrl,
+            category: event.category,
+          });
+        });
+
+        companyPayloads.forEach((company) => {
+          company.events.forEach((event) => {
+            mergedEvents.set(event.id, {
+              id: event.id,
+              title: event.title,
+              city: event.city,
+              startsAt: event.startsAt,
+              publishAt: event.publishAt,
+              isPublished: event.isPublished,
+              price: event.price,
+              posterUrl: event.posterUrl,
+              category: event.category,
+            });
+          });
+        });
+
+        const payload = Array.from(mergedEvents.values()).sort(
+          (left, right) =>
+            new Date(right.startsAt).getTime() - new Date(left.startsAt).getTime(),
+        );
 
         if (!active) {
           return;
@@ -563,7 +609,7 @@ export function TicketsPage() {
     return () => {
       active = false;
     };
-  }, [eventsCopy.failed, token]);
+  }, [eventsCopy.failed, token, user]);
 
   useEffect(() => {
     let active = true;

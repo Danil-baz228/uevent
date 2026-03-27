@@ -610,6 +610,10 @@ export function login(payload: LoginPayload) {
   });
 }
 
+export function getGoogleLoginUrl() {
+  return `${API_BASE_URL}/auth/google/login`;
+}
+
 export function register(payload: RegisterPayload) {
   return requestJson<AuthResponse>('/auth/register', {
     method: 'POST',
