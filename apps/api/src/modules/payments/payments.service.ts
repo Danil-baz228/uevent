@@ -277,7 +277,7 @@ export class PaymentsService {
     );
 
     const finalizedRegistration = await this.finalizeSuccessfulPayment({
-      registration,
+      registration: { ...registration, event },
       confirmedRegistration,
       attendee,
       userId,

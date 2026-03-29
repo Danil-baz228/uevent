@@ -24,6 +24,12 @@ export class UserEntity {
   @Column({ type: 'varchar', nullable: true })
   refreshTokenHash!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  passwordResetToken!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  passwordResetTokenExpiresAt!: Date | null;
+
   @Column('text', { array: true, default: '{}' })
   interests!: string[];
 

@@ -34,6 +34,7 @@ function Layout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
@@ -435,6 +436,18 @@ function Layout() {
             </NavLink>
 
             <div className="header-actions">
+              <button
+                type="button"
+                className="mobile-menu-btn"
+                aria-label="Menu"
+                onClick={() => setMobileMenuOpen((v) => !v)}
+              >
+                {mobileMenuOpen ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                )}
+              </button>
               <div className="theme-switch" aria-label={themeCopy.label}>
                 <button
                   type="button"
@@ -595,8 +608,8 @@ function Layout() {
             </div>
           </div>
 
-          <div className="header-bottomline">
-            <nav className="nav">
+          <div className={`header-bottomline${mobileMenuOpen ? ' mobile-open' : ''}`}>
+            <nav className="nav" onClick={() => setMobileMenuOpen(false)}>
               <NavLink to="/" end className="nav-link">
                 {copy.nav.home}
               </NavLink>

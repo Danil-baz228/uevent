@@ -8,9 +8,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
+import { createHash } from 'crypto';
 import { Repository } from 'typeorm';
 
 import { CompanyEntity } from '../companies/entities/company.entity';
+import { MailService } from '../mail/mail.service';
 import { ChangeEmailDto } from './dto/change-email.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -33,6 +35,7 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly inMemoryData: InMemoryDataService,
+    private readonly mailService: MailService,
     @Optional()
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity> | undefined,
@@ -526,6 +529,67 @@ export class AuthService {
     await this.usersRepository.save(user);
 
     return { message: 'Password updated' };
+  }
+
+  async requestPasswordReset(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const appUrl = this.configService.get<string>('APP_URL', 'http://localhost:5173');
+
+    if (!this.usersRepository) {
+      // in-memory mode — silently succeed
+      return { message: 'If this email is registered, a reset link has been sent' };
+    }
+
+    const user = await this.usersRepository.findOne({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      // Don't reveal whether email exists
+      return { message: 'If this email is registered, a reset link has been sent' };
+    }
+
+    const rawToken = randomUUID();
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    user.passwordResetToken = tokenHash;
+    user.passwordResetTokenExpiresAt = expiresAt;
+    await this.usersRepository.save(user);
+
+    const resetLink = `${appUrl}/auth/reset-password?token=${rawToken}`;
+    await this.mailService.sendPasswordResetEmail(user.email, user.displayName, resetLink);
+
+    return { message: 'If this email is registered, a reset link has been sent' };
+  }
+
+  async resetPassword(token: string, newPassword: string, confirmPassword: string) {
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('Password confirmation does not match');
+    }
+
+    if (!this.usersRepository) {
+      throw new BadRequestException('Password reset requires database mode');
+    }
+
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const user = await this.usersRepository.findOne({
+      where: { passwordResetToken: tokenHash },
+    });
+
+    if (!user || !user.passwordResetTokenExpiresAt) {
+      throw new BadRequestException('Password reset token is invalid or has expired');
+    }
+
+    if (user.passwordResetTokenExpiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Password reset token has expired');
+    }
+
+    user.passwordHash = hashPassword(newPassword);
+    user.passwordResetToken = null;
+    user.passwordResetTokenExpiresAt = null;
+    user.refreshTokenHash = null; // invalidate all sessions
+    await this.usersRepository.save(user);
+
+    return { message: 'Password has been reset successfully' };
   }
 
   private async serializeUser(user: UserEntity) {

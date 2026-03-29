@@ -555,6 +555,8 @@ export class InMemoryDataService {
       displayName: input.displayName,
       passwordHash: input.passwordHash,
       refreshTokenHash: input.refreshTokenHash ?? null,
+      passwordResetToken: null,
+      passwordResetTokenExpiresAt: null,
       interests: input.interests ?? [],
       subscribedCompanyIds: input.subscribedCompanyIds ?? [],
       createdAt: input.createdAt ?? new Date(),

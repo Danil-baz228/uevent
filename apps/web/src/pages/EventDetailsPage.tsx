@@ -68,6 +68,7 @@ export function EventDetailsPage() {
   const [checkoutMessage, setCheckoutMessage] = useState("");
   const [checkoutQuantity, setCheckoutQuantity] = useState("1");
   const [promoEditorOpen, setPromoEditorOpen] = useState(false);
+  const [organizerSettingsModalOpen, setOrganizerSettingsModalOpen] = useState(false);
   const [editablePromoCodes, setEditablePromoCodes] = useState<
     Array<{ code: string; discountPercent: number }>
   >([]);
@@ -76,6 +77,8 @@ export function EventDetailsPage() {
     discountPercent: "10",
   });
   const [promoMessage, setPromoMessage] = useState("");
+  const [paymentSuccessOpen, setPaymentSuccessOpen] = useState(false);
+  const [paymentSuccessEmail, setPaymentSuccessEmail] = useState("");
   const [paymentForm, setPaymentForm] = useState({
     cardholderName: "",
     cardNumber: "",
@@ -528,14 +531,15 @@ export function EventDetailsPage() {
         expiry: "",
         cvc: "",
       });
+      setPaymentSuccessEmail(user?.email ?? "");
+      setPaymentSuccessOpen(true);
       if (result.redirectUrl) {
         const target = /^https?:\/\//i.test(result.redirectUrl)
           ? result.redirectUrl
           : `${window.location.origin}${result.redirectUrl.startsWith("/") ? result.redirectUrl : `/${result.redirectUrl}`}`;
-        window.location.assign(target);
+        setTimeout(() => { window.location.assign(target); }, 3000);
         return;
       }
-      setMessage(copy.eventDetails.registrationConfirmed);
     } catch (error) {
       const nextMessage =
         error instanceof Error ? error.message : copy.eventDetails.buyFailed;
@@ -872,415 +876,7 @@ export function EventDetailsPage() {
             </div>
           ) : null}{" "}
         </article>{" "}
-        {isOrganizer ? (
-          <article className="form-card organizer-settings-card">
-            {" "}
-            <div className="settings-header">
-              {" "}
-              <div>
-                {" "}
-                <span className="eyebrow">
-                  {copy.eventDetails.organizerSettingsEyebrow}
-                </span>{" "}
-                <h2>{copy.eventDetails.organizerSettingsTitle}</h2>{" "}
-                <p className="muted">
-                  {copy.eventDetails.organizerSettingsText}
-                </p>{" "}
-                {isEventFinished ? (
-                  <p className="notice warning">{organizerFinishedHint}</p>
-                ) : null}{" "}
-              </div>{" "}
-            </div>{" "}
-            <div className="settings-toggle-grid">
-              {" "}
-              <button
-                type="button"
-                className={`settings-tile ${event.notifyOnNewAttendee ? "active" : ""}`}
-                disabled={settingsStatus === "saving"}
-                onClick={() =>
-                  void handleOrganizerSetting(
-                    "notifyOnNewAttendee",
-                    !event.notifyOnNewAttendee,
-                  )
-                }
-              >
-                {" "}
-                <strong>{eventSettingsCopy.notifyOnNewAttendee}</strong>{" "}
-                <span className="muted">
-                  {" "}
-                  {event.notifyOnNewAttendee
-                    ? eventSettingsCopy.notifyStateOn
-                    : eventSettingsCopy.notifyStateOff}{" "}
-                </span>{" "}
-              </button>{" "}
-              <button
-                type="button"
-                className={`settings-tile ${isEditMode ? "active" : ""}`}
-                disabled={settingsStatus === "saving"}
-                onClick={() => setIsEditMode((current) => !current)}
-              >
-                {" "}
-                <strong>
-                  {" "}
-                  {isEditMode
-                    ? copy.eventDetails.editEventClose
-                    : copy.eventDetails.editEventOpen}{" "}
-                </strong>{" "}
-                <span className="muted">{copy.eventDetails.editEventText}</span>{" "}
-              </button>{" "}
-              <button
-                type="button"
-                className={`settings-tile ${promoEditorOpen ? "active" : ""}`}
-                disabled={settingsStatus === "saving"}
-                onClick={() => setPromoEditorOpen((current) => !current)}
-              >
-                {" "}
-                <strong>{promoEditorCopy.tileTitle}</strong>{" "}
-                <span className="muted">{promoEditorCopy.tileText}</span>{" "}
-              </button>{" "}
-            </div>{" "}
-            {isEditMode ? (
-              <form className="settings-editor" onSubmit={handleEventUpdate}>
-                {" "}
-                <div className="event-structure-grid">
-                  {" "}
-                  <label className="field">
-                    {" "}
-                    <span>{copy.create.titleLabel}</span>{" "}
-                    <input
-                      value={editForm.title}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          title: event.target.value,
-                        }))
-                      }
-                      required
-                    />{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{copy.create.categoryLabel}</span>{" "}
-                    <input
-                      value={editForm.category}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          category: event.target.value,
-                        }))
-                      }
-                      required
-                    />{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{structureCopy.format}</span>{" "}
-                    <select
-                      value={editForm.format}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          format: event.target.value,
-                        }))
-                      }
-                      required
-                    >
-                      {" "}
-                      <option value="Meetup">
-                        {translateFormat(
-                          "Meetup",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Workshop">
-                        {translateFormat(
-                          "Workshop",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Conference">
-                        {translateFormat(
-                          "Conference",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Lecture">
-                        {translateFormat(
-                          "Lecture",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                    </select>{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{structureCopy.theme}</span>{" "}
-                    <select
-                      value={editForm.theme}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          theme: event.target.value,
-                        }))
-                      }
-                      required
-                    >
-                      {" "}
-                      <option value="Community">
-                        {translateTheme(
-                          "Community",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Technology">
-                        {translateTheme(
-                          "Technology",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Startups">
-                        {translateTheme(
-                          "Startups",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Design">
-                        {translateTheme(
-                          "Design",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Business">
-                        {translateTheme(
-                          "Business",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Education">
-                        {translateTheme(
-                          "Education",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Art">
-                        {translateTheme(
-                          "Art",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Psychology">
-                        {translateTheme(
-                          "Psychology",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                      <option value="Sports">
-                        {translateTheme(
-                          "Sports",
-                          locale === "uk-UA" ? "uk" : "en",
-                        )}
-                      </option>{" "}
-                    </select>{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{attendeeCopy.label}</span>{" "}
-                    <select
-                      value={editForm.attendeeVisibility}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          attendeeVisibility: event.target.value as
-                            | "everyone"
-                            | "registered_only"
-                            | "nobody",
-                        }))
-                      }
-                    >
-                      {" "}
-                      <option value="everyone">
-                        {attendeeCopy.everyone}
-                      </option>{" "}
-                      <option value="registered_only">
-                        {attendeeCopy.registeredOnly}
-                      </option>{" "}
-                      <option value="nobody">{attendeeCopy.nobody}</option>{" "}
-                    </select>{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{eventSettingsCopy.commentAccess}</span>{" "}
-                    <select
-                      value={editForm.commentAccess}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          commentAccess: event.target.value as
-                            | "everyone"
-                            | "registered_only"
-                            | "closed",
-                        }))
-                      }
-                    >
-                      {" "}
-                      <option value="everyone">
-                        {eventSettingsCopy.commentsEveryone}
-                      </option>{" "}
-                      <option value="registered_only">
-                        {" "}
-                        {eventSettingsCopy.commentsRegisteredOnly}{" "}
-                      </option>{" "}
-                      <option value="closed">
-                        {eventSettingsCopy.commentsClosed}
-                      </option>{" "}
-                    </select>{" "}
-                  </label>{" "}
-                </div>{" "}
-                <label className="field">
-                  {" "}
-                  <span>{copy.create.descriptionLabel}</span>{" "}
-                  <textarea
-                    rows={4}
-                    value={editForm.description}
-                    onChange={(event) =>
-                      setEditForm((current) => ({
-                        ...current,
-                        description: event.target.value,
-                      }))
-                    }
-                    required
-                  />{" "}
-                </label>{" "}
-                <div className="event-timing-grid">
-                  {" "}
-                  <label className="field">
-                    {" "}
-                    <span>{copy.create.cityLabel}</span>{" "}
-                    <input
-                      value={editForm.city}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          city: event.target.value,
-                        }))
-                      }
-                      required
-                    />{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{publicationCopy.startsAtLabel}</span>{" "}
-                    <input
-                      type="datetime-local"
-                      value={editForm.startsAt}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          startsAt: event.target.value,
-                        }))
-                      }
-                      required
-                    />{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{publicationCopy.label}</span>{" "}
-                    <input
-                      type="datetime-local"
-                      value={editForm.publishAt}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          publishAt: event.target.value,
-                        }))
-                      }
-                    />{" "}
-                    <small className="field-hint">
-                      {publicationCopy.helper}
-                    </small>{" "}
-                  </label>{" "}
-                </div>{" "}
-                <div className="form-grid">
-                  {" "}
-                  <label className="field">
-                    {" "}
-                    <span>{copy.create.priceLabel}</span>{" "}
-                    <input
-                      type="number"
-                      min="0"
-                      value={editForm.price}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          price: event.target.value,
-                        }))
-                      }
-                    />{" "}
-                  </label>{" "}
-                  <label className="field">
-                    {" "}
-                    <span>{copy.create.capacityLabel}</span>{" "}
-                    <input
-                      type="number"
-                      min="1"
-                      value={editForm.capacity}
-                      onChange={(event) =>
-                        setEditForm((current) => ({
-                          ...current,
-                          capacity: event.target.value,
-                        }))
-                      }
-                    />{" "}
-                  </label>{" "}
-                </div>{" "}
-                <label className="field">
-                  {" "}
-                  <span>{copy.eventDetails.replacePoster}</span>{" "}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(event) => {
-                      const nextFile = event.target.files?.[0] ?? null;
-                      setSelectedPoster(nextFile);
-                      if (nextFile) {
-                        setPosterPreview(URL.createObjectURL(nextFile));
-                      }
-                    }}
-                  />{" "}
-                </label>{" "}
-                {posterPreview ? (
-                  <img
-                    src={posterPreview}
-                    alt="Updated poster preview"
-                    className="event-poster-large settings-poster-preview"
-                  />
-                ) : null}{" "}
-                <div className="form-actions settings-actions">
-                  {" "}
-                  <button
-                    type="submit"
-                    className="primary-button"
-                    disabled={settingsStatus === "saving"}
-                  >
-                    {" "}
-                    {settingsStatus === "saving"
-                      ? copy.common.saving
-                      : copy.common.saveChanges}{" "}
-                  </button>{" "}
-                  <button
-                    type="button"
-                    className="secondary-button danger-outline"
-                    disabled={settingsStatus === "saving"}
-                    onClick={() => void handleDeleteEvent()}
-                  >
-                    {" "}
-                    {copy.eventDetails.deleteEvent}{" "}
-                  </button>{" "}
-                </div>{" "}
-              </form>
-            ) : null}{" "}
-          </article>
-        ) : null}{" "}
+
         <article className="form-card">
           {" "}
           <span className="eyebrow">
@@ -1586,6 +1182,16 @@ export function EventDetailsPage() {
             <p className="muted">{eventSettingsCopy.reminderDisabled}</p>
           ) : null}{" "}
           {message ? <p className="notice">{message}</p> : null}{" "}
+          {isOrganizer ? (
+            <button
+              type="button"
+              className="secondary-button"
+              style={{ width: "100%", gap: 8 }}
+              onClick={() => setOrganizerSettingsModalOpen(true)}
+            >
+              ⚙ {locale === "uk-UA" ? "Налаштування події" : "Event Settings"}
+            </button>
+          ) : null}{" "}
           <Link to="/discover" className="secondary-button">
             {" "}
             {copy.common.backToDiscover}{" "}
@@ -2000,6 +1606,132 @@ export function EventDetailsPage() {
           </div>{" "}
         </div>
       ) : null}{" "}
+      {paymentSuccessOpen ? (
+        <div className="settings-modal-backdrop" onClick={() => setPaymentSuccessOpen(false)}>
+          <div
+            className="settings-modal settings-modal-compact"
+            style={{ textAlign: "center", padding: "40px 32px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 56, marginBottom: 8 }}>🎉</div>
+            <h2 style={{ margin: "0 0 12px", fontSize: 24 }}>
+              {locale === "uk-UA" ? "Дякуємо за покупку!" : "Thank you for your purchase!"}
+            </h2>
+            <p style={{ color: "var(--color-muted, #888)", margin: "0 0 8px", lineHeight: 1.6 }}>
+              {locale === "uk-UA"
+                ? "Ваш квиток підтверджено. Лист з квитком та QR-кодом для входу вже надіслано на вашу пошту."
+                : "Your ticket is confirmed. An email with your ticket and QR code for entry has been sent to your inbox."}
+            </p>
+            {paymentSuccessEmail ? (
+              <p style={{ fontWeight: 700, margin: "0 0 24px", wordBreak: "break-all" }}>
+                {paymentSuccessEmail}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className="primary-button"
+              style={{ minWidth: 140 }}
+              onClick={() => setPaymentSuccessOpen(false)}
+            >
+              {locale === "uk-UA" ? "Чудово!" : "Got it!"}
+            </button>
+          </div>
+        </div>
+      ) : null}{" "}
+      {organizerSettingsModalOpen && isOrganizer ? (
+        <div className="settings-modal-backdrop" onClick={() => setOrganizerSettingsModalOpen(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-modal-head">
+              <div>
+                <span className="eyebrow">{copy.eventDetails.organizerSettingsEyebrow}</span>
+                <h2 style={{ margin: "8px 0 4px" }}>{copy.eventDetails.organizerSettingsTitle}</h2>
+                {isEventFinished ? <p className="notice warning" style={{ marginTop: 8 }}>{organizerFinishedHint}</p> : null}
+              </div>
+              <button type="button" className="settings-modal-close" onClick={() => setOrganizerSettingsModalOpen(false)}>✕</button>
+            </div>
+            <div className="settings-toggle-grid" style={{ marginBottom: 20 }}>
+              <button
+                type="button"
+                className={`settings-tile ${event.notifyOnNewAttendee ? "active" : ""}`}
+                disabled={settingsStatus === "saving"}
+                onClick={() => void handleOrganizerSetting("notifyOnNewAttendee", !event.notifyOnNewAttendee)}
+              >
+                <strong>{eventSettingsCopy.notifyOnNewAttendee}</strong>
+                <span className="muted">{event.notifyOnNewAttendee ? eventSettingsCopy.notifyStateOn : eventSettingsCopy.notifyStateOff}</span>
+              </button>
+              <button
+                type="button"
+                className={`settings-tile ${isEditMode ? "active" : ""}`}
+                onClick={() => setIsEditMode((v) => !v)}
+              >
+                <strong>{isEditMode ? copy.eventDetails.editEventClose : copy.eventDetails.editEventOpen}</strong>
+                <span className="muted">{copy.eventDetails.editEventText}</span>
+              </button>
+              <button
+                type="button"
+                className={`settings-tile ${promoEditorOpen ? "active" : ""}`}
+                onClick={() => setPromoEditorOpen((v) => !v)}
+              >
+                <strong>{promoEditorCopy.tileTitle}</strong>
+                <span className="muted">{promoEditorCopy.tileText}</span>
+              </button>
+            </div>
+            {isEditMode ? (
+              <form className="settings-editor" onSubmit={async (e) => { await handleEventUpdate(e); setOrganizerSettingsModalOpen(false); }}>
+                <div className="event-structure-grid">
+                  <label className="field"><span>{copy.create.titleLabel}</span><input value={editForm.title} onChange={(e) => setEditForm((c) => ({ ...c, title: e.target.value }))} required /></label>
+                  <label className="field"><span>{copy.create.categoryLabel}</span><input value={editForm.category} onChange={(e) => setEditForm((c) => ({ ...c, category: e.target.value }))} required /></label>
+                  <label className="field">
+                    <span>{structureCopy.format}</span>
+                    <select value={editForm.format} onChange={(e) => setEditForm((c) => ({ ...c, format: e.target.value }))} required>
+                      {["Meetup","Workshop","Conference","Lecture"].map((f) => <option key={f} value={f}>{translateFormat(f, locale === "uk-UA" ? "uk" : "en")}</option>)}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{structureCopy.theme}</span>
+                    <select value={editForm.theme} onChange={(e) => setEditForm((c) => ({ ...c, theme: e.target.value }))} required>
+                      {["Community","Technology","Startups","Design","Business","Education","Art","Psychology","Sports"].map((t) => <option key={t} value={t}>{translateTheme(t, locale === "uk-UA" ? "uk" : "en")}</option>)}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{attendeeCopy.label}</span>
+                    <select value={editForm.attendeeVisibility} onChange={(e) => setEditForm((c) => ({ ...c, attendeeVisibility: e.target.value as "everyone"|"registered_only"|"nobody" }))}>
+                      <option value="everyone">{attendeeCopy.everyone}</option>
+                      <option value="registered_only">{attendeeCopy.registeredOnly}</option>
+                      <option value="nobody">{attendeeCopy.nobody}</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{eventSettingsCopy.commentAccess}</span>
+                    <select value={editForm.commentAccess} onChange={(e) => setEditForm((c) => ({ ...c, commentAccess: e.target.value as "everyone"|"registered_only"|"closed" }))}>
+                      <option value="everyone">{eventSettingsCopy.commentsEveryone}</option>
+                      <option value="registered_only">{eventSettingsCopy.commentsRegisteredOnly}</option>
+                      <option value="closed">{eventSettingsCopy.commentsClosed}</option>
+                    </select>
+                  </label>
+                </div>
+                <label className="field" style={{ marginTop: 12 }}><span>{copy.create.descriptionLabel}</span><textarea rows={3} value={editForm.description} onChange={(e) => setEditForm((c) => ({ ...c, description: e.target.value }))} required /></label>
+                <div className="event-timing-grid" style={{ marginTop: 12 }}>
+                  <label className="field"><span>{copy.create.cityLabel}</span><input value={editForm.city} onChange={(e) => setEditForm((c) => ({ ...c, city: e.target.value }))} required /></label>
+                  <label className="field"><span>{publicationCopy.startsAtLabel}</span><input type="datetime-local" value={editForm.startsAt} onChange={(e) => setEditForm((c) => ({ ...c, startsAt: e.target.value }))} required /></label>
+                  <label className="field"><span>{publicationCopy.label}</span><input type="datetime-local" value={editForm.publishAt} onChange={(e) => setEditForm((c) => ({ ...c, publishAt: e.target.value }))} /><small className="field-hint">{publicationCopy.helper}</small></label>
+                </div>
+                <div className="form-grid" style={{ marginTop: 12 }}>
+                  <label className="field"><span>{copy.create.priceLabel}</span><input type="number" min="0" value={editForm.price} onChange={(e) => setEditForm((c) => ({ ...c, price: e.target.value }))} /></label>
+                  <label className="field"><span>{copy.create.capacityLabel}</span><input type="number" min="1" value={editForm.capacity} onChange={(e) => setEditForm((c) => ({ ...c, capacity: e.target.value }))} /></label>
+                </div>
+                <label className="field" style={{ marginTop: 12 }}><span>{copy.eventDetails.replacePoster}</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => { const f = e.target.files?.[0] ?? null; setSelectedPoster(f); if (f) setPosterPreview(URL.createObjectURL(f)); }} /></label>
+                {posterPreview ? <img src={posterPreview} alt="Preview" className="event-poster-large settings-poster-preview" style={{ marginTop: 10 }} /> : null}
+                <div className="form-actions settings-actions" style={{ marginTop: 18 }}>
+                  <button type="submit" className="primary-button" disabled={settingsStatus === "saving"}>{settingsStatus === "saving" ? copy.common.saving : copy.common.saveChanges}</button>
+                  <button type="button" className="secondary-button danger-outline" disabled={settingsStatus === "saving"} onClick={() => void handleDeleteEvent()}>{copy.eventDetails.deleteEvent}</button>
+                </div>
+              </form>
+            ) : null}
+          </div>
+        </div>
+      ) : null}{" "}
     </section>
+
   );
 }

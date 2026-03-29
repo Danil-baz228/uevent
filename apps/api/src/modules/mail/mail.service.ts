@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
+import QRCode from 'qrcode';
 
 type SendPaymentReceiptInput = {
   attendee: {
@@ -75,6 +76,55 @@ export class MailService {
         });
   }
 
+  async sendPasswordResetEmail(to: string, name: string, resetLink: string): Promise<void> {
+    const subject = 'Password reset request';
+    const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reset your password</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #eef2f8; font-family: "Segoe UI", sans-serif; padding: 32px; color: #132033; }
+      .shell { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 16px 60px rgba(30,55,90,.12); }
+      .head { padding: 32px; background: linear-gradient(135deg,#132033,#1c3155 58%,#28537a); color: #f7fbff; }
+      .head h1 { margin: 16px 0 8px; font-size: 26px; }
+      .head p { margin: 0; opacity: .85; line-height: 1.6; }
+      .body { padding: 32px; }
+      .btn { display: inline-block; margin-top: 20px; padding: 14px 28px; background: #d45a2b; color: #fff; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 16px; }
+      .note { margin-top: 24px; padding: 14px 16px; background: #f3f7ff; border-radius: 12px; font-size: 13px; color: #607089; line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="head">
+        <span style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.7">Uevent</span>
+        <h1>Reset your password</h1>
+        <p>Hi ${this.escapeHtml(name)}, we received a request to reset your password.</p>
+      </div>
+      <div class="body">
+        <p>Click the button below to choose a new password. This link is valid for <strong>1 hour</strong>.</p>
+        <a class="btn" href="${this.escapeHtml(resetLink)}">Reset Password</a>
+        <div class="note">
+          If you did not request a password reset, you can safely ignore this email.
+          Your password will remain unchanged.<br /><br />
+          <strong>Link:</strong> ${this.escapeHtml(resetLink)}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
+    const text = `Hi ${name},\n\nClick the link below to reset your password (valid for 1 hour):\n${resetLink}\n\nIf you did not request this, ignore this email.`;
+
+    await this.transporter.sendMail({
+      from: this.fromAddress,
+      to,
+      subject,
+      html,
+      text,
+    });
+  }
+
   async sendPaymentReceipt(
     input: SendPaymentReceiptInput,
   ): Promise<PaymentReceiptArtifacts> {
@@ -97,7 +147,11 @@ export class MailService {
     const formattedAmount = this.formatMoney(input.amountTotal, input.currency);
     const formattedDate = this.formatDate(input.event.startsAt);
     const subject = `Payment confirmed: ${input.event.title}`;
-    const ticketLink = `../tickets/${ticketFileName}`;
+    const apiBaseUrl = this.configService.get<string>('APP_URL', 'http://localhost:4000').replace('5173', '4000');
+    const ticketLink = `${apiBaseUrl}/uploads/tickets/${ticketFileName}`;
+    const qrCodeDataUri = await QRCode.toDataURL(ticketCode, { margin: 1, width: 200 });
+    const qrCodeBuffer = await QRCode.toBuffer(ticketCode, { margin: 1, width: 200 });
+    const qrCid = `qr-${ticketCode.toLowerCase()}@uevent`;
     const ticketHtml = this.renderTicketHtml({
       attendeeName: input.attendee.displayName,
       ticketCode,
@@ -110,6 +164,7 @@ export class MailService {
       amount: formattedAmount,
       sessionId: input.sessionId,
       generatedAt: this.formatDate(sentAt),
+      qrCodeDataUri,
     });
     const emailHtml = this.renderEmailHtml({
       attendeeName: input.attendee.displayName,
@@ -124,6 +179,7 @@ export class MailService {
       sessionId: input.sessionId,
       ticketCode,
       ticketLink,
+      qrCodeDataUri: `cid:${qrCid}`,
     });
     const emailText = this.renderEmailText({
       attendeeName: input.attendee.displayName,
@@ -152,6 +208,12 @@ export class MailService {
           filename: `uevent-ticket-${ticketCode}.html`,
           path: ticketFilePath,
           contentType: 'text/html; charset=utf-8',
+        },
+        {
+          filename: 'qr-code.png',
+          content: qrCodeBuffer,
+          contentType: 'image/png',
+          cid: qrCid,
         },
       ],
     });
@@ -199,6 +261,7 @@ export class MailService {
     amount: string;
     sessionId: string;
     generatedAt: string;
+    qrCodeDataUri: string;
   }) {
     return `<!doctype html>
 <html lang="en">
@@ -344,10 +407,14 @@ export class MailService {
       <footer class="footer">
         <p><span class="label">Ticket code</span></p>
         <p class="code">${this.escapeHtml(input.ticketCode)}</p>
-        <p style="margin-top: 18px;">
-          Checkout session: ${this.escapeHtml(input.sessionId)}<br />
-          Generated at: ${this.escapeHtml(input.generatedAt)}
-        </p>
+        <div style="margin-top:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+          <img src="${input.qrCodeDataUri}" alt="QR Code" width="120" height="120" style="display:block;border-radius:12px;border:4px solid #eef2f8" />
+          <div style="color:#5a6881;font-size:13px;line-height:1.6">
+            Scan the QR code for quick check-in<br />
+            Checkout session: ${this.escapeHtml(input.sessionId)}<br />
+            Generated at: ${this.escapeHtml(input.generatedAt)}
+          </div>
+        </div>
       </footer>
     </section>
   </body>
@@ -367,6 +434,7 @@ export class MailService {
     sessionId: string;
     ticketCode: string;
     ticketLink: string;
+    qrCodeDataUri: string;
   }) {
     return `<!doctype html>
 <html lang="en">
@@ -541,9 +609,10 @@ export class MailService {
           Open generated ticket
         </a>
 
-        <div class="note">
-          This preview is stored locally by the backend as a demo mailbox so the payment flow can be
-          shown even without a real SMTP provider configured.
+        <div style="margin-top:28px;text-align:center">
+          <p style="color:#607089;font-size:13px;margin-bottom:12px">Scan at check-in</p>
+          <img src="${input.qrCodeDataUri}" alt="QR Code" width="160" height="160" style="border-radius:16px;border:6px solid #eef2f8" />
+          <p style="margin-top:10px;font-size:12px;color:#888;letter-spacing:.04em">${this.escapeHtml(input.ticketCode)}</p>
         </div>
       </div>
     </section>
