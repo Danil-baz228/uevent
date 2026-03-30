@@ -1,0 +1,402 @@
+From: tickets@uevent.local
+To: maksmenshov777@gmail.com
+Subject: Payment confirmed: maksim
+Message-ID: <77fa2489-3a2a-a91a-8a81-0f267b025313@uevent.local>
+Date: Mon, 30 Mar 2026 07:55:02 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="--_NmP-e0b09663fe489b4e-Part_1"
+
+----_NmP-e0b09663fe489b4e-Part_1
+Content-Type: multipart/alternative;
+ boundary="--_NmP-e0b09663fe489b4e-Part_2"
+
+----_NmP-e0b09663fe489b4e-Part_2
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Hello Maksimka337,
+
+Your payment for "maksim" was confirmed.
+Organizer: KhPI
+Starts at: =D1=81=D0=B5=D1=80=D0=B5=D0=B4=D0=B0, 1 =
+=D0=BA=D0=B2=D1=96=D1=82=D0=BD=D1=8F 2026 =D1=80. =D0=BE 10:22
+Location: =D0=9A=D0=B8=D1=97=D0=B2, 9-=D0=90, =D0=9B=D0=B8=D0=BF=D1=81=
+=D1=8C=D0=BA=D0=B0 =D0=B2=D1=83=D0=BB=D0=B8=D1=86=D1=8F, =
+=D0=A3=D1=80=D1=8F=D0=B4=D0=BE=D0=B2=D0=B8=D0=B9 =D0=BA=D0=B2=D0=B0=D1=80=
+=D1=82=D0=B0=D0=BB, =D0=9B=D0=B8=D0=BF=D0=BA=D0=B8, =
+=D0=9F=D0=B5=D1=87=D0=B5=D1=80=D1=81=D1=8C=D0=BA=D0=B8=D0=B9 =
+=D1=80=D0=B0=D0=B9=D0=BE=D0=BD, =D0=9A=D0=B8=D1=97=D0=B2, 01021, =
+=D0=A3=D0=BA=D1=80=D0=B0=D1=97=D0=BD=D0=B0
+Quantity: 1
+Paid amount: $10.00
+Ticket code: UE-0493F6-DEEE20F1
+
+Generated ticket: /uploads/tickets/UE-0493=
+F6-DEEE20F1.html
+
+Thank you for using Uevent.
+----_NmP-e0b09663fe489b4e-Part_2
+Content-Type: multipart/related; type="text/html";
+ boundary="--_NmP-e0b09663fe489b4e-Part_4"
+
+----_NmP-e0b09663fe489b4e-Part_4
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<!doctype html>
+<html lang=3D"en">
+  <head>
+    <meta charset=3D"utf-8" />
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, =
+initial-scale=3D1" />
+    <title>Payment receipt</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #132033;
+        --muted: #607089;
+        --card: #ffffff;
+        --line: rgba(19,=
+ 32, 51, 0.12);
+        --bg: #eef2f8;
+        --accent: #d45a2b;
+        --accent-soft: rgba(212, 90, 43, 0.1);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Segoe UI", sans-serif;
+        padding: 24px;
+      }
+      .shell {
+        max-width: 760px;
+        margin: 0 auto;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: var(--card);
+        box-shadow: 0 24px 80px rgba(30, 55, 90, 0.12);
+      }
+      .masthead {
+        padding: 32px;
+        background: =
+linear-gradient(135deg, #132033 0%, #1c3155 58%, #28537a 100%);
+        color: #f7fbff;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(247, 251, 255, 0.=
+14);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 16px 0 10px;
+        font-size: 34px;
+        line-height: 1.05;
+      }
+      p {
+        margin: 0;
+        color: inherit;
+        line-height: 1.7;
+      }
+      .body {
+        padding: 32px;
+      }
+      .mail-meta {
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        border: 1px solid =
+var(--line);
+        border-radius: 20px;
+        background: #f8fbff;
+        margin-bottom: 24px;
+      }
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .meta-row span:first-child {
+        color: var(--muted);
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: =
+repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin: 24px 0;
+      }
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(212, 90, 43, 0.08), =
+rgba(255, 255, 255, 0.9));
+      }
+      .summary-card strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 18px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 8px;
+        padding: 14px 18px;
+        border-radius: 16px;
+        background: #132033;
+        color: #f7fbff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .note {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: var(--accent-soft);
+        color: var(--ink);
+      }
+      @media (max-width: 720px) {
+        body { padding: 12px; }
+        .masthead, .body { padding: 22px; }
+        .summary { =
+grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <section class=3D"shell">
+      <header class=3D"masthead">
+        <span class=3D"pill">Payment receipt</span>
+        <h1>maksim</h1>
+        <p>
+          Hi Maksimka337, your card payment was captured =
+successfully.
+          Your generated ticket is attached to this email and=
+ also available with the button below.
+        </p>
+      </header>
+      <div class=3D"body">
+        <div class=3D"mail-meta">
+          <div class=3D"meta-row"><span>To</span><strong>maksmenshov777@gma=
+il.com</strong></div>
+          <div class=3D"meta-row"><span>Organizer</sp=
+an><strong>KhPI</strong></div>
+          <div class=3D"meta-row"><span>Sess=
+ion</span><strong>embedded_bfedb6da198f478c86a5746c03da11c9</strong></div>
+          <div class=3D"meta-row"><span>Ticket code</span><strong>UE-0493F6=
+-DEEE20F1</strong></div>
+        </div>
+
+        <p>
+          We confirmed 1 paid ticket(s) for <strong>maksim</strong>.
+          Keep this email for your records or open the generated ticket =
+below.
+        </p>
+
+        <div class=3D"summary">
+          <article class=3D"summary-card">
+            <span>Date and =
+time</span>
+            <strong>=D1=81=D0=B5=D1=80=D0=B5=D0=B4=D0=B0, 1 =
+=D0=BA=D0=B2=D1=96=D1=82=D0=BD=D1=8F 2026 =D1=80. =D0=BE 10:22</strong>
+          </article>
+          <article class=3D"summary-card">
+            <span>Location</span>
+            <strong>=D0=9A=D0=B8=D1=97=
+=D0=B2, 9-=D0=90, =D0=9B=D0=B8=D0=BF=D1=81=D1=8C=D0=BA=D0=B0 =
+=D0=B2=D1=83=D0=BB=D0=B8=D1=86=D1=8F, =D0=A3=D1=80=D1=8F=D0=B4=D0=BE=
+=D0=B2=D0=B8=D0=B9 =D0=BA=D0=B2=D0=B0=D1=80=D1=82=D0=B0=D0=BB, =
+=D0=9B=D0=B8=D0=BF=D0=BA=D0=B8, =D0=9F=D0=B5=D1=87=D0=B5=D1=80=D1=81=
+=D1=8C=D0=BA=D0=B8=D0=B9 =D1=80=D0=B0=D0=B9=D0=BE=D0=BD, =
+=D0=9A=D0=B8=D1=97=D0=B2, 01021, =D0=A3=D0=BA=D1=80=D0=B0=D1=97=D0=BD=D0=B0=
+</strong>
+          </article>
+          <article class=3D"summary-card">
+            <span>Paid amount</span>
+            <strong>$10.00</strong>
+          </article>
+          <article class=3D"summary-card">
+            <span>Quantity</span>
+            <strong>1</strong>
+          </article>
+        </div>
+
+        <a class=3D"button" =
+href=3D"http://localhost:4000/uploads/tickets/UE-0493F6-DEEE20F1.html" =
+target=3D"_blank" rel=3D"noreferrer">
+          Open generated ticket
+        </a>
+
+        <div style=3D"margin-top:28px;text-align:center">
+          <p style=3D"color:#607089;font-size:13px;margin-bottom:12px">Scan=
+ at check-in</p>
+          <img src=3D"cid:qr-ue-0493f6-deee20f1@uevent" =
+alt=3D"QR Code" width=3D"160" height=3D"160" style=3D"border-radius:16px;bo=
+rder:6px solid #eef2f8" />
+          <p style=3D"margin-top:10px;font-size:=
+12px;color:#888;letter-spacing:.04em">UE-0493F6-DEEE20F1</p>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
+----_NmP-e0b09663fe489b4e-Part_4
+Content-Type: image/png; name=qr-code.png
+Content-ID: <qr-ue-0493f6-deee20f1@uevent>
+Content-Transfer-Encoding: base64
+Content-Disposition: inline; filename=qr-code.png
+
+iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAAAklEQVR4AewaftIAAAPzSURBVO3B
+UXLlhhEEweoJ3P/K7f1VWAPQAgw9kpWZ/oGkvzVIWg2SVoOk1SBpNUhaDZJWg6TVIGl18AVJ+G3a
+ciUJb2jLG5Lw27TlzCBpNUhaDZJWg6TVIGk1SFoNklaDpNXBQ9ryXSThCW05k4S3JOFMW57Qlu8i
+CXcNklaDpNUgaTVIWg2SVoOk1SBpNUhaHbwoCW9oyxuScKYtT0jClbZ8giS8oS1vGCStBkmrQdJq
+kLQaJK0GSatB0upA/1hb7krClbbo3zFIWg2SVoOk1SBpNUhaDZJWg6TVIGl1oH9VW64k4a626H83
+SFoNklaDpNUgaTVIWg2SVoOk1SBpdfCitvwkSbirLT9JW36SQdJqkLQaJK0GSatB0mqQtBokrQ4e
+kgT9VVuuJOFKW64k4Q1J+E0GSatB0mqQtBokrQZJq0HSapC0GiStDr6gLfpvbflJ2qK/GiStBkmr
+QdJqkLQaJK0GSatB0mqQtDr4giRcacuVJJxpyxuS8IS2nEnClbY8oS1vSMKZtjwhCWfaciUJV9py
+ZpC0GiStBkmrQdJqkLQaJK0GSauDD5KEJ7TlTFuuJOG3ScKVttyVhDe05a5B0mqQtBokrQZJq0HS
+apC0GiStBkmrgy9oy6doy11J+BRJ+BRtuSsJT2jLXUm40pYzg6TVIGk1SFoNklaDpNUgaTVIWg2S
+VukffIgkvKEtV5LwKdpyVxK+k7acScKVttw1SFoNklaDpNUgaTVIWg2SVoOk1SBpdfAFSfhO2nIm
+CVfaciUJd7XlShLe0Ja7kvCGtlxJwpW2nBkkrQZJq0HSapC0GiStBkmrQdLq4Ava8pO05TtpyxuS
+8Ia2XEnCXW25a5C0GiStBkmrQdJqkLQaJK0GSatB0urgC5Lw27TlrrZcScKVtlxJwl1tuZKEu5Jw
+pS13JeFKW84MklaDpNUgaTVIWg2SVoOk1SBpNUhaHTykLd9FEp7Qlrva8oa2vKEtb0jClbbcNUha
+DZJWg6TVIGk1SFoNklaDpNXBi5LwhrZ8F0l4QlvuSsJdSXhCWz7BIGk1SFoNklaDpNUgaTVIWg2S
+VoOk1YH+b5JwpS1PSMKZtlxpy5UkvCEJZ9ryhkHSapC0GiStBkmrQdJqkLQaJK0GSasD/WNJeEMS
+7krCG9ryhiQ8oS1nBkmrQdJqkLQaJK0GSatB0mqQtDp4UVt+kracScKVJDyhLd9FEq605UxbriTh
+rkHSapC0GiStBkmrQdJqkLQaJK0GSauDhyTht0nCXW15QxKutOWuJDwhCZ9gkLQaJK0GSatB0mqQ
+tBokrQZJq0HSKv0DSX9rkLQaJK0GSatB0mqQtBokrQZJq/8Ah/YGnmR6en8AAAAASUVORK5CYII=
+----_NmP-e0b09663fe489b4e-Part_4--
+
+----_NmP-e0b09663fe489b4e-Part_2--
+
+----_NmP-e0b09663fe489b4e-Part_1
+Content-Type: text/html; charset=utf-8;
+ name=uevent-ticket-UE-0493F6-DEEE20F1.html
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+ filename=uevent-ticket-UE-0493F6-DEEE20F1.html
+
+PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJz
+ZXQ9InV0Zi04IiAvPgogICAgPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRl
+dmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xIiAvPgogICAgPHRpdGxlPlVldmVudCBUaWNrZXQ8
+L3RpdGxlPgogICAgPHN0eWxlPgogICAgICA6cm9vdCB7CiAgICAgICAgY29sb3Itc2NoZW1lOiBs
+aWdodDsKICAgICAgICAtLWluazogIzEzMjAzMzsKICAgICAgICAtLW11dGVkOiAjNWE2ODgxOwog
+ICAgICAgIC0tbGluZTogcmdiYSgxOSwgMzIsIDUxLCAwLjEyKTsKICAgICAgICAtLWNhcmQ6ICNm
+ZmZmZmY7CiAgICAgICAgLS1wYW5lbDogbGluZWFyLWdyYWRpZW50KDEzNWRlZywgI2ZlZjJkNywg
+I2YzZjhmZiA1MiUsICNkYWY0ZWUgMTAwJSk7CiAgICAgICAgLS1hY2NlbnQ6ICNkNDVhMmI7CiAg
+ICAgIH0KICAgICAgKiB7IGJveC1zaXppbmc6IGJvcmRlci1ib3g7IH0KICAgICAgYm9keSB7CiAg
+ICAgICAgbWFyZ2luOiAwOwogICAgICAgIGZvbnQtZmFtaWx5OiAiU2Vnb2UgVUkiLCBzYW5zLXNl
+cmlmOwogICAgICAgIGJhY2tncm91bmQ6ICNmNGY2ZmI7CiAgICAgICAgY29sb3I6IHZhcigtLWlu
+ayk7CiAgICAgICAgcGFkZGluZzogMzJweDsKICAgICAgfQogICAgICAudGlja2V0IHsKICAgICAg
+ICBtYXgtd2lkdGg6IDg4MHB4OwogICAgICAgIG1hcmdpbjogMCBhdXRvOwogICAgICAgIGJhY2tn
+cm91bmQ6IHZhcigtLWNhcmQpOwogICAgICAgIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWxpbmUp
+OwogICAgICAgIGJvcmRlci1yYWRpdXM6IDI4cHg7CiAgICAgICAgb3ZlcmZsb3c6IGhpZGRlbjsK
+ICAgICAgICBib3gtc2hhZG93OiAwIDI0cHggODBweCByZ2JhKDMwLCA1NSwgOTAsIDAuMTIpOwog
+ICAgICB9CiAgICAgIC5oZXJvIHsKICAgICAgICBwYWRkaW5nOiAzMnB4OwogICAgICAgIGJhY2tn
+cm91bmQ6IHZhcigtLXBhbmVsKTsKICAgICAgICBib3JkZXItYm90dG9tOiAxcHggc29saWQgdmFy
+KC0tbGluZSk7CiAgICAgIH0KICAgICAgLmV5ZWJyb3cgewogICAgICAgIGRpc3BsYXk6IGlubGlu
+ZS1ibG9jazsKICAgICAgICBwYWRkaW5nOiA2cHggMTJweDsKICAgICAgICBib3JkZXItcmFkaXVz
+OiA5OTlweDsKICAgICAgICBiYWNrZ3JvdW5kOiByZ2JhKDI1NSwgMjU1LCAyNTUsIDAuNzYpOwog
+ICAgICAgIGZvbnQtc2l6ZTogMTJweDsKICAgICAgICBsZXR0ZXItc3BhY2luZzogMC4wOGVtOwog
+ICAgICAgIHRleHQtdHJhbnNmb3JtOiB1cHBlcmNhc2U7CiAgICAgICAgY29sb3I6IHZhcigtLWFj
+Y2VudCk7CiAgICAgICAgZm9udC13ZWlnaHQ6IDcwMDsKICAgICAgfQogICAgICBoMSB7CiAgICAg
+ICAgbWFyZ2luOiAxNnB4IDAgMTJweDsKICAgICAgICBmb250LXNpemU6IDM2cHg7CiAgICAgICAg
+bGluZS1oZWlnaHQ6IDEuMDU7CiAgICAgIH0KICAgICAgcCB7CiAgICAgICAgbWFyZ2luOiAwOwog
+ICAgICAgIGNvbG9yOiB2YXIoLS1tdXRlZCk7CiAgICAgICAgbGluZS1oZWlnaHQ6IDEuNjsKICAg
+ICAgfQogICAgICAuZ3JpZCB7CiAgICAgICAgZGlzcGxheTogZ3JpZDsKICAgICAgICBncmlkLXRl
+bXBsYXRlLWNvbHVtbnM6IHJlcGVhdCgyLCBtaW5tYXgoMCwgMWZyKSk7CiAgICAgICAgZ2FwOiAx
+OHB4OwogICAgICAgIHBhZGRpbmc6IDMycHg7CiAgICAgIH0KICAgICAgLmNlbGwgewogICAgICAg
+IGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWxpbmUpOwogICAgICAgIGJvcmRlci1yYWRpdXM6IDIw
+cHg7CiAgICAgICAgcGFkZGluZzogMThweDsKICAgICAgICBiYWNrZ3JvdW5kOiByZ2JhKDI0NSwg
+MjQ4LCAyNTUsIDAuNjgpOwogICAgICB9CiAgICAgIC5sYWJlbCB7CiAgICAgICAgZGlzcGxheTog
+YmxvY2s7CiAgICAgICAgZm9udC1zaXplOiAxMnB4OwogICAgICAgIGZvbnQtd2VpZ2h0OiA3MDA7
+CiAgICAgICAgdGV4dC10cmFuc2Zvcm06IHVwcGVyY2FzZTsKICAgICAgICBsZXR0ZXItc3BhY2lu
+ZzogMC4wOGVtOwogICAgICAgIGNvbG9yOiB2YXIoLS1tdXRlZCk7CiAgICAgICAgbWFyZ2luLWJv
+dHRvbTogOHB4OwogICAgICB9CiAgICAgIC52YWx1ZSB7CiAgICAgICAgZm9udC1zaXplOiAxOHB4
+OwogICAgICAgIGZvbnQtd2VpZ2h0OiA3MDA7CiAgICAgICAgY29sb3I6IHZhcigtLWluayk7CiAg
+ICAgIH0KICAgICAgLmZvb3RlciB7CiAgICAgICAgcGFkZGluZzogMCAzMnB4IDMycHg7CiAgICAg
+IH0KICAgICAgLmNvZGUgewogICAgICAgIGRpc3BsYXk6IGlubGluZS1mbGV4OwogICAgICAgIHBh
+ZGRpbmc6IDEycHggMTZweDsKICAgICAgICBib3JkZXItcmFkaXVzOiAxNnB4OwogICAgICAgIGJh
+Y2tncm91bmQ6ICMxMzIwMzM7CiAgICAgICAgY29sb3I6ICNmN2ZiZmY7CiAgICAgICAgZm9udC13
+ZWlnaHQ6IDgwMDsKICAgICAgICBsZXR0ZXItc3BhY2luZzogMC4wOGVtOwogICAgICB9CiAgICAg
+IEBtZWRpYSAobWF4LXdpZHRoOiA3MjBweCkgewogICAgICAgIGJvZHkgeyBwYWRkaW5nOiAxNnB4
+OyB9CiAgICAgICAgLmdyaWQgeyBncmlkLXRlbXBsYXRlLWNvbHVtbnM6IDFmcjsgcGFkZGluZzog
+MjBweDsgfQogICAgICAgIC5oZXJvIHsgcGFkZGluZzogMjRweDsgfQogICAgICAgIC5mb290ZXIg
+eyBwYWRkaW5nOiAwIDIwcHggMjBweDsgfQogICAgICB9CiAgICA8L3N0eWxlPgogIDwvaGVhZD4K
+ICA8Ym9keT4KICAgIDxzZWN0aW9uIGNsYXNzPSJ0aWNrZXQiPgogICAgICA8aGVhZGVyIGNsYXNz
+PSJoZXJvIj4KICAgICAgICA8c3BhbiBjbGFzcz0iZXllYnJvdyI+VWV2ZW50IHRpY2tldDwvc3Bh
+bj4KICAgICAgICA8aDE+bWFrc2ltPC9oMT4KICAgICAgICA8cD4KICAgICAgICAgIFRoaXMgdGlj
+a2V0IGNvbmZpcm1zIHBhaWQgYWNjZXNzIGZvciBNYWtzaW1rYTMzNy4KICAgICAgICAgIEtlZXAg
+dGhlIGNvZGUgYmVsb3cgYW5kIHByZXNlbnQgaXQgYXQgY2hlY2staW4gaWYgdGhlIG9yZ2FuaXpl
+ciBhc2tzLgogICAgICAgIDwvcD4KICAgICAgPC9oZWFkZXI+CiAgICAgIDxkaXYgY2xhc3M9Imdy
+aWQiPgogICAgICAgIDxhcnRpY2xlIGNsYXNzPSJjZWxsIj4KICAgICAgICAgIDxzcGFuIGNsYXNz
+PSJsYWJlbCI+T3JnYW5pemVyPC9zcGFuPgogICAgICAgICAgPHNwYW4gY2xhc3M9InZhbHVlIj5L
+aFBJPC9zcGFuPgogICAgICAgIDwvYXJ0aWNsZT4KICAgICAgICA8YXJ0aWNsZSBjbGFzcz0iY2Vs
+bCI+CiAgICAgICAgICA8c3BhbiBjbGFzcz0ibGFiZWwiPlN0YXJ0cyBhdDwvc3Bhbj4KICAgICAg
+ICAgIDxzcGFuIGNsYXNzPSJ2YWx1ZSI+0YHQtdGA0LXQtNCwLCAxINC60LLRltGC0L3RjyAyMDI2
+INGALiDQviAxMDoyMjwvc3Bhbj4KICAgICAgICA8L2FydGljbGU+CiAgICAgICAgPGFydGljbGUg
+Y2xhc3M9ImNlbGwiPgogICAgICAgICAgPHNwYW4gY2xhc3M9ImxhYmVsIj5DaXR5PC9zcGFuPgog
+ICAgICAgICAgPHNwYW4gY2xhc3M9InZhbHVlIj7QmtC40ZfQsjwvc3Bhbj4KICAgICAgICA8L2Fy
+dGljbGU+CiAgICAgICAgPGFydGljbGUgY2xhc3M9ImNlbGwiPgogICAgICAgICAgPHNwYW4gY2xh
+c3M9ImxhYmVsIj5BZGRyZXNzPC9zcGFuPgogICAgICAgICAgPHNwYW4gY2xhc3M9InZhbHVlIj45
+LdCQLCDQm9C40L/RgdGM0LrQsCDQstGD0LvQuNGG0Y8sINCj0YDRj9C00L7QstC40Lkg0LrQstCw
+0YDRgtCw0LssINCb0LjQv9C60LgsINCf0LXRh9C10YDRgdGM0LrQuNC5INGA0LDQudC+0L0sINCa
+0LjRl9CyLCAwMTAyMSwg0KPQutGA0LDRl9C90LA8L3NwYW4+CiAgICAgICAgPC9hcnRpY2xlPgog
+ICAgICAgIDxhcnRpY2xlIGNsYXNzPSJjZWxsIj4KICAgICAgICAgIDxzcGFuIGNsYXNzPSJsYWJl
+bCI+UXVhbnRpdHk8L3NwYW4+CiAgICAgICAgICA8c3BhbiBjbGFzcz0idmFsdWUiPjE8L3NwYW4+
+CiAgICAgICAgPC9hcnRpY2xlPgogICAgICAgIDxhcnRpY2xlIGNsYXNzPSJjZWxsIj4KICAgICAg
+ICAgIDxzcGFuIGNsYXNzPSJsYWJlbCI+UGFpZDwvc3Bhbj4KICAgICAgICAgIDxzcGFuIGNsYXNz
+PSJ2YWx1ZSI+JDEwLjAwPC9zcGFuPgogICAgICAgIDwvYXJ0aWNsZT4KICAgICAgPC9kaXY+CiAg
+ICAgIDxmb290ZXIgY2xhc3M9ImZvb3RlciI+CiAgICAgICAgPHA+PHNwYW4gY2xhc3M9ImxhYmVs
+Ij5UaWNrZXQgY29kZTwvc3Bhbj48L3A+CiAgICAgICAgPHAgY2xhc3M9ImNvZGUiPlVFLTA0OTNG
+Ni1ERUVFMjBGMTwvcD4KICAgICAgICA8ZGl2IHN0eWxlPSJtYXJnaW4tdG9wOjI0cHg7ZGlzcGxh
+eTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MjRweDtmbGV4LXdyYXA6d3JhcCI+CiAgICAg
+ICAgICA8aW1nIHNyYz0iZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhF
+VWdBQUFNZ0FBQURJQ0FZQUFBQ3RXSzZlQUFBQUFrbEVRVlI0QWV3YWZ0SUFBQVB6U1VSQlZPM0JV
+WExsaGhFRXdlb0ozUC9LN2YxVldBUFFBZ3c5a3BXWi9vR2t2elZJV2cyU1ZvT2sxU0JwTlVoYURa
+SldnNlRWSUdsMThBVkorRzNhY2lVSmIyakxHNUx3MjdUbHpDQnBOVWhhRFpKV2c2VFZJR2sxU0Zv
+TmtsYURwTlhCUTlyeVhTVGhDVzA1azRTM0pPRk1XNTdRbHU4aUNYY05rbGFEcE5VZ2FUVklXZzJT
+Vm9PazFTQnBOVWhhSGJ3b0NXOW95eHVTY0tZdFQwakNsYlo4Z2lTOG9TMXZHQ1N0QmttclFkSnFr
+TFFhSkswR1NhdEIwdXBBLzFoYjdrckNsYmJvM3pGSVdnMlNWb09rMVNCcE5VaGFEWkpXZzZUVklH
+bDFvSDlWVzY0azRhNjI2SDgzU0ZvTmtsYURwTlVnYVRWSVdnMlNWb09rMVNCcGRmQ2l0dndrU2Jp
+ckxUOUpXMzZTUWRKcWtMUWFKSzBHU2F0QjBtcVF0Qm9rclE0ZWtnVDlWVnV1Sk9GS1c2NGs0UTFK
+K0UwR1NhdEIwbXFRdEJva3JRWkpxMEhTYXBDMEdpU3REcjZnTGZwdmJmbEoycUsvR2lTdEJrbXJR
+ZEpxa0xRYUpLMEdTYXRCMG1xUXREcjRnaVJjYWN1VkpKeHB5eHVTOElTMm5FbkNsYlk4b1MxdlNN
+S1p0andoQ1dmYWNpVUpWOXB5WnBDMEdpU3RCa21yUWRKcWtMUWFKSzBHU2F1REQ1S0VKN1RsVEZ1
+dUpPRzNTY0tWdHR5VmhEZTA1YTVCMG1xUXRCb2tyUVpKcTBIU2FwQzBHaVN0Qmttcmd5OW95NmRv
+eTExSitCUkorQlJ0dVNzSlQyakxYVW00MHBZemc2VFZJR2sxU0ZvTmtsYURwTlVnYVRWSVdnMlNW
+dWtmZklna3ZLRXRWNUx3S2RweVZ4SytrN2FjU2NLVnR0dzFTRm9Oa2xhRHBOVWdhVFZJV2cyU1Zv
+T2sxU0JwZGZBRlNmaE8ybkltQ1ZmYWNpVUpkN1hsU2hMZTBKYTdrdkNHdGx4SndwVzJuQmtrclFa
+SnEwSFNhcEMwR2lTdEJrbXJRZExxNEF2YThwTzA1VHRweXh1UzhJYTJYRW5DWFcyNWE1QzBHaVN0
+QmttclFkSnFrTFFhSkswR1NhdEIwdXJnQzVMdzI3VGxyclpjU2NLVnRseEp3bDF0dVpLRXU1Sndw
+UzEzSmVGS1c4NE1rbGFEcE5VZ2FUVklXZzJTVm9PazFTQnBOVWhhSFR5a0xkOUZFcDdRbHJ2YThv
+YTJ2S0V0YjBqQ2xiYmNOVWhhRFpKV2c2VFZJR2sxU0ZvTmtsYURwTlhCaTVMd2hyWjhGMGw0UWx2
+dVNzSmRTWGhDV3o3QklHazFTRm9Oa2xhRHBOVWdhVFZJV2cyU1ZvT2sxWUgrYjVKd3BTMVBTTUta
+dGx4cHk1VWt2Q0VKWjlyeWhrSFNhcEMwR2lTdEJrbXJRZEpxa0xRYUpLMEdTYXNEL1dOSmVFTVM3
+a3JDRzlyeWhpUThvUzFuQmttclFkSnFrTFFhSkswR1NhdEIwbXFRdERwNFVWdCtrcmFjU2NLVkpE
+eWhMZDlGRXE2MDVVeGJyaVRocmtIU2FwQzBHaVN0QmttclFkSnFrTFFhSkswR1NhdURoeVRodDBu
+Q1hXMTVReEt1dE9XdUpEd2hDWjlna0xRYUpLMEdTYXRCMG1xUXRCb2tyUVpKcTBIU0t2MERTWDly
+a0xRYUpLMEdTYXRCMG1xUXRCb2tyUVpKcS84QWgvWUdubVI2ZW44QUFBQUFTVVZPUks1Q1lJST0i
+IGFsdD0iUVIgQ29kZSIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIHN0eWxlPSJkaXNwbGF5OmJs
+b2NrO2JvcmRlci1yYWRpdXM6MTJweDtib3JkZXI6NHB4IHNvbGlkICNlZWYyZjgiIC8+CiAgICAg
+ICAgICA8ZGl2IHN0eWxlPSJjb2xvcjojNWE2ODgxO2ZvbnQtc2l6ZToxM3B4O2xpbmUtaGVpZ2h0
+OjEuNiI+CiAgICAgICAgICAgIFNjYW4gdGhlIFFSIGNvZGUgZm9yIHF1aWNrIGNoZWNrLWluPGJy
+IC8+CiAgICAgICAgICAgIENoZWNrb3V0IHNlc3Npb246IGVtYmVkZGVkX2JmZWRiNmRhMTk4ZjQ3
+OGM4NmE1NzQ2YzAzZGExMWM5PGJyIC8+CiAgICAgICAgICAgIEdlbmVyYXRlZCBhdDog0L/QvtC9
+0LXQtNGW0LvQvtC6LCAzMCDQsdC10YDQtdC30L3RjyAyMDI2INGALiDQviAxMDo1NQogICAgICAg
+ICAgPC9kaXY+CiAgICAgICAgPC9kaXY+CiAgICAgIDwvZm9vdGVyPgogICAgPC9zZWN0aW9uPgog
+IDwvYm9keT4KPC9odG1sPg==
+----_NmP-e0b09663fe489b4e-Part_1--

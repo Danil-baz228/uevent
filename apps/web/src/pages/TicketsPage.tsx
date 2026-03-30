@@ -8,6 +8,7 @@ import {
   ApiNotification,
   clearAllNotifications,
   fetchCompanyById,
+  forgotPassword,
   fetchMyNotifications,
   fetchMyRegistrations,
   fetchMyScheduledEvents,
@@ -80,6 +81,9 @@ export function TicketsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState<SaveStatus>('idle');
   const [passwordMessage, setPasswordMessage] = useState('');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryStatus, setRecoveryStatus] = useState<SaveStatus>('idle');
+  const [recoveryMessage, setRecoveryMessage] = useState('');
 
   const pageCopy = useMemo(
     () =>
@@ -239,6 +243,30 @@ export function TicketsPage() {
               'These companies can publish events and post company news on the platform.',
             noCompanies: 'You have not created any companies yet.',
             openCompany: 'Open company',
+          },
+    [language],
+  );
+
+  const recoveryFlowCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            title: 'Відновлення доступу',
+            text: 'Введіть email, і ми надішлемо лист із кнопкою для створення нового пароля.',
+            action: 'Надіслати лист',
+            sending: 'Надсилаємо...',
+            hint: 'Після переходу з листа система попросить ввести новий пароль і підтвердження.',
+            success: 'Лист для відновлення пароля відправлено. Перевірте пошту.',
+            failed: 'Не вдалося надіслати лист для відновлення',
+          }
+        : {
+            title: 'Restore access',
+            text: 'Enter your email and we will send a message with a button to create a new password.',
+            action: 'Send email',
+            sending: 'Sending...',
+            hint: 'After opening the message, the app will ask for a new password and confirmation.',
+            success: 'Password reset email sent. Check your inbox.',
+            failed: 'Failed to send password reset email',
           },
     [language],
   );
@@ -482,6 +510,7 @@ export function TicketsPage() {
     setSettingsName(user.displayName);
     setSettingsInterests(user.interests.join(', '));
     setNewEmail(user.email);
+    setRecoveryEmail(user.email);
   }, [user]);
 
   useEffect(() => {
@@ -691,6 +720,24 @@ export function TicketsPage() {
     setEmailMessage('');
     setPasswordStatus('idle');
     setPasswordMessage('');
+    setRecoveryStatus('idle');
+    setRecoveryMessage('');
+  }
+
+  async function handleRecoveryRequest() {
+    setRecoveryStatus('saving');
+    setRecoveryMessage('');
+
+    try {
+      await forgotPassword({ email: recoveryEmail.trim() });
+      setRecoveryStatus('idle');
+      setRecoveryMessage(recoveryFlowCopy.success);
+    } catch (error) {
+      setRecoveryStatus('error');
+      setRecoveryMessage(
+        error instanceof Error ? error.message : recoveryFlowCopy.failed,
+      );
+    }
   }
 
   function getNotificationDestination(notification: ApiNotification) {
@@ -1590,16 +1637,44 @@ export function TicketsPage() {
               {activeSettingsTab === 'recovery' ? (
                 <div className="account-settings-form">
                   <div className="account-settings-copy">
-                    <h3>{pageCopy.recoveryTitle}</h3>
-                    <p>{pageCopy.recoveryText}</p>
+                    <h3>{recoveryFlowCopy.title}</h3>
+                    <p>{recoveryFlowCopy.text}</p>
                   </div>
 
                   <label className="field">
                     <span>{pageCopy.emailLabel}</span>
-                    <input value={user.email} disabled />
+                    <input
+                      type="email"
+                      value={recoveryEmail}
+                      onChange={(event) => setRecoveryEmail(event.target.value)}
+                      placeholder="name@example.com"
+                    />
                   </label>
 
-                  <p className="notice">{pageCopy.recoveryHint}</p>
+                  {recoveryMessage ? (
+                    <p
+                      className={`notice ${
+                        recoveryStatus === 'error' ? 'error' : 'success'
+                      }`}
+                    >
+                      {recoveryMessage}
+                    </p>
+                  ) : (
+                    <p className="notice">{recoveryFlowCopy.hint}</p>
+                  )}
+
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      disabled={recoveryStatus === 'saving'}
+                      onClick={() => void handleRecoveryRequest()}
+                    >
+                      {recoveryStatus === 'saving'
+                        ? recoveryFlowCopy.sending
+                        : recoveryFlowCopy.action}
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>

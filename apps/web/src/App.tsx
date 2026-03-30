@@ -20,6 +20,7 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PaymentCancelPage } from './pages/PaymentCancelPage';
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { TicketsPage } from './pages/TicketsPage';
 import { useTheme } from './theme/ThemeContext';
 
@@ -702,6 +703,7 @@ export default function App() {
         <Route path="/companies/:companyId" element={<CompanyPage />} />
         <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/account" element={<TicketsPage />} />
         <Route path="/tickets" element={<TicketsPage />} />
         <Route path="/payment/success" element={<PaymentSuccessPage />} />

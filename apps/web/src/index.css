@@ -1515,6 +1515,36 @@ img {
   margin-top: 22px;
 }
 
+.auth-form .field + .notice {
+  margin-top: 6px;
+}
+
+.auth-form .form-actions {
+  margin-top: 10px;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-form .form-actions .auth-link-button {
+  padding: 10px 2px;
+}
+
+.auth-link-button {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-indigo);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-recovery-panel {
+  display: grid;
+  gap: 14px;
+  padding-top: 6px;
+}
+
 .details-shell {
   grid-template-columns: 1.08fr 0.92fr;
   align-items: start;

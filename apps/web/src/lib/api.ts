@@ -304,6 +304,16 @@ export type ChangePasswordPayload = {
   confirmPassword: string;
 };
 
+export type ForgotPasswordPayload = {
+  email: string;
+};
+
+export type ResetPasswordPayload = {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 export type CreateCommentPayload = {
   content: string;
   parentCommentId?: string;
@@ -647,6 +657,20 @@ export function changePassword(payload: ChangePasswordPayload, token: string) {
   return requestJson<{ message: string }>('/auth/change-password', {
     method: 'POST',
     token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function forgotPassword(payload: ForgotPasswordPayload) {
+  return requestJson<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resetPassword(payload: ResetPasswordPayload) {
+  return requestJson<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
     body: JSON.stringify(payload),
   });
 }

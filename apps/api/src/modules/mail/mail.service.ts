@@ -82,36 +82,170 @@ export class MailService {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Reset your password</title>
     <style>
+      :root {
+        color-scheme: light;
+        --ink: #132033;
+        --muted: #607089;
+        --card: #ffffff;
+        --line: rgba(19, 32, 51, 0.12);
+        --bg: #eef2f8;
+        --accent: #d45a2b;
+        --accent-soft: rgba(212, 90, 43, 0.1);
+      }
       * { box-sizing: border-box; }
-      body { margin: 0; background: #eef2f8; font-family: "Segoe UI", sans-serif; padding: 32px; color: #132033; }
-      .shell { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 16px 60px rgba(30,55,90,.12); }
-      .head { padding: 32px; background: linear-gradient(135deg,#132033,#1c3155 58%,#28537a); color: #f7fbff; }
-      .head h1 { margin: 16px 0 8px; font-size: 26px; }
-      .head p { margin: 0; opacity: .85; line-height: 1.6; }
-      .body { padding: 32px; }
-      .btn { display: inline-block; margin-top: 20px; padding: 14px 28px; background: #d45a2b; color: #fff; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 16px; }
-      .note { margin-top: 24px; padding: 14px 16px; background: #f3f7ff; border-radius: 12px; font-size: 13px; color: #607089; line-height: 1.6; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Segoe UI", sans-serif;
+        padding: 24px;
+      }
+      .shell {
+        max-width: 760px;
+        margin: 0 auto;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: var(--card);
+        box-shadow: 0 24px 80px rgba(30, 55, 90, 0.12);
+      }
+      .masthead {
+        padding: 32px;
+        background: linear-gradient(135deg, #132033 0%, #1c3155 58%, #28537a 100%);
+        color: #f7fbff;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(247, 251, 255, 0.14);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 16px 0 10px;
+        font-size: 34px;
+        line-height: 1.05;
+      }
+      p {
+        margin: 0;
+        color: inherit;
+        line-height: 1.7;
+      }
+      .body {
+        padding: 32px;
+      }
+      .mail-meta {
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: #f8fbff;
+        margin-bottom: 24px;
+      }
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .meta-row span:first-child {
+        color: var(--muted);
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin: 24px 0;
+      }
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(212, 90, 43, 0.08), rgba(255, 255, 255, 0.9));
+      }
+      .summary-card strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 18px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 8px;
+        padding: 14px 18px;
+        border-radius: 16px;
+        background: #132033;
+        color: #f7fbff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .note {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: var(--accent-soft);
+        color: var(--ink);
+      }
+      @media (max-width: 720px) {
+        body { padding: 12px; }
+        .masthead, .body { padding: 22px; }
+        .summary { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
-    <div class="shell">
-      <div class="head">
-        <span style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.7">Uevent</span>
+    <section class="shell">
+      <header class="masthead">
+        <span class="pill">Password reset</span>
         <h1>Reset your password</h1>
-        <p>Hi ${this.escapeHtml(name)}, we received a request to reset your password.</p>
-      </div>
+        <p>
+          Hi ${this.escapeHtml(name)}, we received a request to restore access to your Uevent account.
+          Use the button below to create a new password.
+        </p>
+      </header>
       <div class="body">
-        <p>Click the button below to choose a new password. This link is valid for <strong>1 hour</strong>.</p>
-        <a class="btn" href="${this.escapeHtml(resetLink)}">Reset Password</a>
+        <div class="mail-meta">
+          <div class="meta-row"><span>Account</span><strong>${this.escapeHtml(to)}</strong></div>
+          <div class="meta-row"><span>Request type</span><strong>Password reset</strong></div>
+          <div class="meta-row"><span>Link lifetime</span><strong>1 hour</strong></div>
+        </div>
+
+        <p>
+          Click the button below to open the secure reset screen and enter a new password with confirmation.
+        </p>
+
+        <div class="summary">
+          <article class="summary-card">
+            <span>What happens next</span>
+            <strong>Create a new password</strong>
+          </article>
+          <article class="summary-card">
+            <span>After saving</span>
+            <strong>Sign in again</strong>
+          </article>
+        </div>
+
+        <a class="button" href="${this.escapeHtml(resetLink)}" target="_blank" rel="noreferrer">
+          Open password reset
+        </a>
+
         <div class="note">
-          If you did not request a password reset, you can safely ignore this email.
-          Your password will remain unchanged.<br /><br />
-          <strong>Link:</strong> ${this.escapeHtml(resetLink)}
+          If you did not request this email, you can safely ignore it and your current password will stay unchanged.
+          <br /><br />
+          <strong>Direct link:</strong> ${this.escapeHtml(resetLink)}
         </div>
       </div>
-    </div>
+    </section>
   </body>
 </html>`;
     const text = `Hi ${name},\n\nClick the link below to reset your password (valid for 1 hour):\n${resetLink}\n\nIf you did not request this, ignore this email.`;

@@ -1178,7 +1178,7 @@ export function EventDetailsPage() {
                 : copy.common.joinEvent}{" "}
             </button>
           )}{" "}
-          {!registration ? (
+          {!registration && !isEventFinished ? (
             <p className="muted">{eventSettingsCopy.reminderDisabled}</p>
           ) : null}{" "}
           {message ? <p className="notice">{message}</p> : null}{" "}

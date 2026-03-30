@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Uevent Ticket</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #132033;
+        --muted: #5a6881;
+        --line: rgba(19, 32, 51, 0.12);
+        --card: #ffffff;
+        --panel: linear-gradient(135deg, #fef2d7, #f3f8ff 52%, #daf4ee 100%);
+        --accent: #d45a2b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: #f4f6fb;
+        color: var(--ink);
+        padding: 32px;
+      }
+      .ticket {
+        max-width: 880px;
+        margin: 0 auto;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 24px 80px rgba(30, 55, 90, 0.12);
+      }
+      .hero {
+        padding: 32px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+      .eyebrow {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.76);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      h1 {
+        margin: 16px 0 12px;
+        font-size: 36px;
+        line-height: 1.05;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        padding: 32px;
+      }
+      .cell {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        background: rgba(245, 248, 255, 0.68);
+      }
+      .label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .value {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .footer {
+        padding: 0 32px 32px;
+      }
+      .code {
+        display: inline-flex;
+        padding: 12px 16px;
+        border-radius: 16px;
+        background: #132033;
+        color: #f7fbff;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+      @media (max-width: 720px) {
+        body { padding: 16px; }
+        .grid { grid-template-columns: 1fr; padding: 20px; }
+        .hero { padding: 24px; }
+        .footer { padding: 0 20px 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="ticket">
+      <header class="hero">
+        <span class="eyebrow">Uevent ticket</span>
+        <h1>maksim</h1>
+        <p>
+          This ticket confirms paid access for Maksimka337.
+          Keep the code below and present it at check-in if the organizer asks.
+        </p>
+      </header>
+      <div class="grid">
+        <article class="cell">
+          <span class="label">Organizer</span>
+          <span class="value">KhPI</span>
+        </article>
+        <article class="cell">
+          <span class="label">Starts at</span>
+          <span class="value">середа, 1 квітня 2026 р. о 10:22</span>
+        </article>
+        <article class="cell">
+          <span class="label">City</span>
+          <span class="value">Київ</span>
+        </article>
+        <article class="cell">
+          <span class="label">Address</span>
+          <span class="value">9-А, Липська вулиця, Урядовий квартал, Липки, Печерський район, Київ, 01021, Україна</span>
+        </article>
+        <article class="cell">
+          <span class="label">Quantity</span>
+          <span class="value">1</span>
+        </article>
+        <article class="cell">
+          <span class="label">Paid</span>
+          <span class="value">$10.00</span>
+        </article>
+      </div>
+      <footer class="footer">
+        <p><span class="label">Ticket code</span></p>
+        <p class="code">UE-0493F6-DEEE20F1</p>
+        <div style="margin-top:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAAAklEQVR4AewaftIAAAPzSURBVO3BUXLlhhEEweoJ3P/K7f1VWAPQAgw9kpWZ/oGkvzVIWg2SVoOk1SBpNUhaDZJWg6TVIGl18AVJ+G3aciUJb2jLG5Lw27TlzCBpNUhaDZJWg6TVIGk1SFoNklaDpNXBQ9ryXSThCW05k4S3JOFMW57Qlu8iCXcNklaDpNUgaTVIWg2SVoOk1SBpNUhaHbwoCW9oyxuScKYtT0jClbZ8giS8oS1vGCStBkmrQdJqkLQaJK0GSatB0upA/1hb7krClbbo3zFIWg2SVoOk1SBpNUhaDZJWg6TVIGl1oH9VW64k4a626H83SFoNklaDpNUgaTVIWg2SVoOk1SBpdfCitvwkSbirLT9JW36SQdJqkLQaJK0GSatB0mqQtBokrQ4ekgT9VVuuJOFKW64k4Q1J+E0GSatB0mqQtBokrQZJq0HSapC0GiStDr6gLfpvbflJ2qK/GiStBkmrQdJqkLQaJK0GSatB0mqQtDr4giRcacuVJJxpyxuS8IS2nEnClbY8oS1vSMKZtjwhCWfaciUJV9pyZpC0GiStBkmrQdJqkLQaJK0GSauDD5KEJ7TlTFuuJOG3ScKVttyVhDe05a5B0mqQtBokrQZJq0HSapC0GiStBkmrgy9oy6doy11J+BRJ+BRtuSsJT2jLXUm40pYzg6TVIGk1SFoNklaDpNUgaTVIWg2SVukffIgkvKEtV5LwKdpyVxK+k7acScKVttw1SFoNklaDpNUgaTVIWg2SVoOk1SBpdfAFSfhO2nImCVfaciUJd7XlShLe0Ja7kvCGtlxJwpW2nBkkrQZJq0HSapC0GiStBkmrQdLq4Ava8pO05TtpyxuS8Ia2XEnCXW25a5C0GiStBkmrQdJqkLQaJK0GSatB0urgC5Lw27TlrrZcScKVtlxJwl1tuZKEu5JwpS13JeFKW84MklaDpNUgaTVIWg2SVoOk1SBpNUhaHTykLd9FEp7Qlrva8oa2vKEtb0jClbbcNUhaDZJWg6TVIGk1SFoNklaDpNXBi5LwhrZ8F0l4QlvuSsJdSXhCWz7BIGk1SFoNklaDpNUgaTVIWg2SVoOk1YH+b5JwpS1PSMKZtlxpy5UkvCEJZ9ryhkHSapC0GiStBkmrQdJqkLQaJK0GSasD/WNJeEMS7krCG9ryhiQ8oS1nBkmrQdJqkLQaJK0GSatB0mqQtDp4UVt+kracScKVJDyhLd9FEq605UxbriThrkHSapC0GiStBkmrQdJqkLQaJK0GSauDhyTht0nCXW15QxKutOWuJDwhCZ9gkLQaJK0GSatB0mqQtBokrQZJq0HSKv0DSX9rkLQaJK0GSatB0mqQtBokrQZJq/8Ah/YGnmR6en8AAAAASUVORK5CYII=" alt="QR Code" width="120" height="120" style="display:block;border-radius:12px;border:4px solid #eef2f8" />
+          <div style="color:#5a6881;font-size:13px;line-height:1.6">
+            Scan the QR code for quick check-in<br />
+            Checkout session: embedded_bfedb6da198f478c86a5746c03da11c9<br />
+            Generated at: понеділок, 30 березня 2026 р. о 10:55
+          </div>
+        </div>
+      </footer>
+    </section>
+  </body>
+</html>
