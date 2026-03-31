@@ -66,6 +66,12 @@ export class EventRegistrationEntity {
   @Column({ type: 'timestamptz', nullable: true })
   paymentReceiptSentAt!: Date | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  checkedInAt!: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  checkedInByUserId!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

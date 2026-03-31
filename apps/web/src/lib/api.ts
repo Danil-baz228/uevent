@@ -14,6 +14,7 @@ export type AuthUser = {
   displayName: string;
   interests: string[];
   subscribedCompanyIds: string[];
+  isAdmin: boolean;
   companies: {
     id: string;
     name: string;
@@ -89,6 +90,7 @@ export type ApiEvent = {
   notifyOnNewAttendee: boolean;
   commentAccess: 'everyone' | 'registered_only' | 'closed';
   commentsClosed: boolean;
+  commentsClosedByAdmin: boolean;
   isPublished: boolean;
   organizer: {
     id: string;
@@ -250,9 +252,29 @@ export type ApiRegistration = {
   paymentReceiptPreviewPath: string | null;
   paymentReceiptMessageId: string | null;
   paymentReceiptSentAt: string | null;
+  checkedInAt: string | null;
+  checkedInByUserId: string | null;
   createdAt: string;
   updatedAt: string;
   event: ApiEvent;
+};
+
+export type VerifyTicketPayload = {
+  ticketCode: string;
+  eventId?: string;
+};
+
+export type VerifiedTicketResponse = {
+  ticketCode: string;
+  registration: ApiRegistration;
+  attendee: {
+    id: string;
+    displayName: string;
+    email: string;
+  };
+  alreadyCheckedIn: boolean;
+  checkedInAt: string | null;
+  checkedInByUserId: string | null;
 };
 
 export type RegisterPayload = {
@@ -336,6 +358,71 @@ export type ApiNotification = {
   body: string;
   isRead: boolean;
   createdAt: string;
+};
+
+export type AdminOverview = {
+  usersCount: number;
+  eventsCount: number;
+  companiesCount: number;
+  commentsCount: number;
+};
+
+export type AdminUserItem = {
+  id: string;
+  email: string;
+  displayName: string;
+  interests: string[];
+  subscribedCompanyIds: string[];
+  isAdmin: boolean;
+  companiesCount: number;
+  createdAt: string;
+};
+
+export type AdminEventItem = {
+  id: string;
+  title: string;
+  city: string;
+  startsAt: string;
+  publishAt: string | null;
+  price: number;
+  company: {
+    id: string;
+    name: string;
+  } | null;
+  organizer: {
+    id: string;
+    displayName: string;
+    email: string;
+  } | null;
+};
+
+export type AdminCompanyItem = {
+  id: string;
+  name: string;
+  email: string;
+  location: string;
+  owner: {
+    id: string;
+    displayName: string;
+    email: string;
+  } | null;
+  eventsCount: number;
+  newsCount: number;
+  createdAt: string;
+};
+
+export type AdminCommentItem = {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  content: string;
+  parentCommentId: string | null;
+  createdAt: string;
+  author: {
+    id: string;
+    displayName: string;
+    email: string;
+  } | null;
 };
 
 type RequestOptions = RequestInit & {
@@ -539,6 +626,22 @@ export function fetchMyRegistrations(token: string) {
   });
 }
 
+export function verifyTicket(payload: VerifyTicketPayload, token: string) {
+  return requestJson<VerifiedTicketResponse>('/registrations/verify-ticket', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function checkInTicket(payload: VerifyTicketPayload, token: string) {
+  return requestJson<VerifiedTicketResponse>('/registrations/check-in', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
 export function createCompany(payload: CreateCompanyPayload, token: string) {
   return requestJson<ApiCompany>('/companies', {
     method: 'POST',
@@ -703,6 +806,78 @@ export function markAllNotificationsAsRead(token: string) {
 
 export function clearAllNotifications(token: string) {
   return requestJson<{ message: string }>('/notifications/clear-all', {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function fetchAdminOverview(token: string) {
+  return requestJson<AdminOverview>('/admin/overview', {
+    token,
+  });
+}
+
+export function fetchAdminUsers(token: string) {
+  return requestJson<AdminUserItem[]>('/admin/users', {
+    token,
+  });
+}
+
+export function promoteAdminUser(userId: string, token: string) {
+  return requestJson<{ message: string }>(`/admin/users/${userId}/promote`, {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export function revokeAdminUser(userId: string, token: string) {
+  return requestJson<{ message: string }>(`/admin/users/${userId}/revoke`, {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export function deleteAdminUser(userId: string, token: string) {
+  return requestJson<{ message: string }>(`/admin/users/${userId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function fetchAdminEvents(token: string) {
+  return requestJson<AdminEventItem[]>('/admin/events', {
+    token,
+  });
+}
+
+export function deleteAdminEvent(eventId: string, token: string) {
+  return requestJson<{ message: string }>(`/admin/events/${eventId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function fetchAdminCompanies(token: string) {
+  return requestJson<AdminCompanyItem[]>('/admin/companies', {
+    token,
+  });
+}
+
+export function deleteAdminCompany(companyId: string, token: string) {
+  return requestJson<{ message: string }>(`/admin/companies/${companyId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function fetchAdminComments(token: string) {
+  return requestJson<AdminCommentItem[]>('/admin/comments', {
+    token,
+  });
+}
+
+export function deleteAdminComment(commentId: string, token: string) {
+  return requestJson<{ message: string }>(`/admin/comments/${commentId}`, {
     method: 'DELETE',
     token,
   });

@@ -82,6 +82,9 @@ export class EventEntity {
   @Column({ default: false })
   commentsClosed!: boolean;
 
+  @Column({ default: false })
+  commentsClosedByAdmin!: boolean;
+
   @Column({ nullable: true })
   organizerId!: string | null;
 

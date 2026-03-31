@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   Optional,
@@ -10,6 +11,7 @@ import { In, Repository } from 'typeorm';
 
 import { InMemoryDataService } from '../in-memory-data/in-memory-data.service';
 import { EventEntity } from '../events/entities/event.entity';
+import { CompanyEntity } from '../companies/entities/company.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import {
@@ -205,6 +207,49 @@ export class RegistrationsService {
     const savedRegistration = await this.registrationsRepository.save(registration);
 
     return this.serializeRegistration(savedRegistration, registration.event);
+  }
+
+  async verifyTicket(ticketCode: string, userId: string, eventId?: string) {
+    const normalizedTicketCode = this.normalizeTicketCode(ticketCode);
+    const registration = await this.findManageableRegistrationByTicketCode(
+      normalizedTicketCode,
+      userId,
+      eventId,
+    );
+
+    return this.serializeVerifiedTicket(registration, normalizedTicketCode);
+  }
+
+  async checkInTicket(ticketCode: string, userId: string, eventId?: string) {
+    const normalizedTicketCode = this.normalizeTicketCode(ticketCode);
+    const registration = await this.findManageableRegistrationByTicketCode(
+      normalizedTicketCode,
+      userId,
+      eventId,
+    );
+
+    if (!registration.checkedInAt) {
+      if (!this.registrationsRepository) {
+        const updatedRegistration = this.inMemoryData.updateRegistration(registration.id, {
+          checkedInAt: new Date(),
+          checkedInByUserId: userId,
+        });
+
+        if (!updatedRegistration) {
+          throw new NotFoundException('Registration was not found');
+        }
+
+        return this.serializeVerifiedTicket(updatedRegistration, normalizedTicketCode);
+      }
+
+      registration.checkedInAt = new Date();
+      registration.checkedInByUserId = userId;
+      const savedRegistration = await this.registrationsRepository.save(registration);
+
+      return this.serializeVerifiedTicket(savedRegistration, normalizedTicketCode);
+    }
+
+    return this.serializeVerifiedTicket(registration, normalizedTicketCode);
   }
 
   async findConfirmedAttendees(eventId: string) {
@@ -489,6 +534,16 @@ export class RegistrationsService {
     await this.registrationsRepository.update(registrationId, payload);
   }
 
+  buildTicketCode(eventId: string, registrationId: string) {
+    const eventPart = eventId.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(-6);
+    const registrationPart = registrationId
+      .replace(/[^a-z0-9]/gi, '')
+      .toUpperCase()
+      .slice(-8);
+
+    return `UE-${eventPart}-${registrationPart}`;
+  }
+
   private async ensureNoExistingRegistration(eventId: string, userId: string) {
     if (!this.registrationsRepository) {
       const existingRegistration = this.inMemoryData.findRegistrationByEventAndUser(
@@ -562,6 +617,8 @@ export class RegistrationsService {
       paymentReceiptPreviewPath: registration.paymentReceiptPreviewPath,
       paymentReceiptMessageId: registration.paymentReceiptMessageId,
       paymentReceiptSentAt: registration.paymentReceiptSentAt,
+      checkedInAt: registration.checkedInAt,
+      checkedInByUserId: registration.checkedInByUserId,
       createdAt: registration.createdAt,
       updatedAt: registration.updatedAt,
       event: {
@@ -630,5 +687,141 @@ export class RegistrationsService {
     throw new BadRequestException(
       'Registrations and ticket purchases are unavailable for events that have already ended',
     );
+  }
+
+  private normalizeTicketCode(ticketCode: string) {
+    const trimmed = ticketCode.trim();
+
+    if (!trimmed) {
+      throw new BadRequestException('Ticket code is required');
+    }
+
+    const fromUrlMatch = trimmed.match(/\/(UE-[A-Z0-9-]+)(?:\.html)?$/i);
+    const normalized = (fromUrlMatch?.[1] ?? trimmed).toUpperCase();
+
+    if (!/^UE-[A-Z0-9]+-[A-Z0-9]+$/.test(normalized)) {
+      throw new BadRequestException('Ticket code format is invalid');
+    }
+
+    return normalized;
+  }
+
+  private async findManageableRegistrationByTicketCode(
+    ticketCode: string,
+    userId: string,
+    eventId?: string,
+  ) {
+    if (!this.registrationsRepository || !this.eventsRepository) {
+      const registrations = this.inMemoryData
+        .listRegistrationsByEvent(eventId ?? '', ['confirmed'])
+        .filter((registration) => {
+          const event = registration.event;
+          const canManage =
+            event.organizerId === userId || event.company?.ownerId === userId;
+
+          return canManage && this.buildTicketCode(event.id, registration.id) === ticketCode;
+        });
+
+      const registration = eventId
+        ? registrations[0] ?? null
+        : this.inMemoryData
+            .listRegistrationsByUser(userId)
+            .find(() => false) ?? null;
+
+      if (registration) {
+        return registration;
+      }
+
+      const allManageableRegistrations = this.inMemoryData
+        .listEvents()
+        .filter((event) => !eventId || event.id === eventId)
+        .filter((event) => event.organizerId === userId || event.company?.ownerId === userId)
+        .flatMap((event) => this.inMemoryData.listRegistrationsByEvent(event.id, ['confirmed']))
+        .find((candidate) => this.buildTicketCode(candidate.eventId, candidate.id) === ticketCode);
+
+      if (!allManageableRegistrations) {
+        throw new NotFoundException('Ticket was not found');
+      }
+
+      return allManageableRegistrations;
+    }
+
+    const manageableEvents = await this.eventsRepository.find({
+      where: eventId ? { id: eventId } : {},
+      relations: {
+        organizer: true,
+        company: { owner: true } as unknown as boolean,
+      },
+    });
+
+    const allowedEventIds = manageableEvents
+      .filter((event) => this.canManageEvent(userId, event))
+      .map((event) => event.id);
+
+    if (eventId && allowedEventIds.length === 0) {
+      throw new ForbiddenException('You cannot manage this event');
+    }
+
+    if (allowedEventIds.length === 0) {
+      throw new NotFoundException('Ticket was not found');
+    }
+
+    const registrations = await this.registrationsRepository.find({
+      where: {
+        eventId: In(allowedEventIds),
+        status: 'confirmed',
+      },
+      relations: {
+        event: {
+          organizer: true,
+          company: { owner: true } as unknown as boolean,
+        },
+        user: true,
+      },
+    });
+
+    const registration = registrations.find(
+      (candidate) =>
+        this.buildTicketCode(candidate.eventId, candidate.id) === ticketCode,
+    );
+
+    if (!registration) {
+      throw new NotFoundException('Ticket was not found');
+    }
+
+    return registration;
+  }
+
+  private canManageEvent(
+    userId: string,
+    event: EventEntity & { company?: (CompanyEntity & { owner?: { id: string } }) | null },
+  ) {
+    return (
+      event.organizerId === userId ||
+      event.organizer?.id === userId ||
+      event.company?.ownerId === userId ||
+      event.company?.owner?.id === userId
+    );
+  }
+
+  private serializeVerifiedTicket(
+    registration: EventRegistrationEntity & {
+      event: EventEntity;
+      user: { id: string; displayName: string; email: string };
+    },
+    ticketCode: string,
+  ) {
+    return {
+      ticketCode,
+      registration: this.serializeRegistration(registration, registration.event),
+      attendee: {
+        id: registration.user.id,
+        displayName: registration.user.displayName,
+        email: registration.user.email,
+      },
+      alreadyCheckedIn: Boolean(registration.checkedInAt),
+      checkedInAt: registration.checkedInAt,
+      checkedInByUserId: registration.checkedInByUserId,
+    };
   }
 }

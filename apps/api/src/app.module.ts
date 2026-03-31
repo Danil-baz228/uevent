@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { isDatabaseEnabled } from './config/database-mode';
 import { validateEnvironment } from './config/env.validation';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { EventCommentEntity } from './modules/comments/entities/event-comment.entity';
@@ -63,6 +64,7 @@ const seederImports = isDatabaseEnabled ? [DatabaseSeederModule] : [];
     ...databaseImports,
     ...seederImports,
     HealthModule,
+    AdminModule,
     AuthModule,
     CommentsModule,
     CompaniesModule,

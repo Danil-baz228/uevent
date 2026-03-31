@@ -4,7 +4,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateRegistrationDto } from './dto/create-registration.dto';
+import { CheckInTicketDto } from './dto/check-in-ticket.dto';
 import { UpdateRegistrationReminderDto } from './dto/update-registration-reminder.dto';
+import { VerifyTicketDto } from './dto/verify-ticket.dto';
 import { RegistrationsService } from './registrations.service';
 
 @ApiTags('registrations')
@@ -31,5 +33,21 @@ export class RegistrationsController {
     @CurrentUser() user: { sub: string },
   ) {
     return this.registrationsService.updateReminder(eventId, dto, user.sub);
+  }
+
+  @Post('verify-ticket')
+  verifyTicket(
+    @Body() dto: VerifyTicketDto,
+    @CurrentUser() user: { sub: string },
+  ) {
+    return this.registrationsService.verifyTicket(dto.ticketCode, user.sub, dto.eventId);
+  }
+
+  @Post('check-in')
+  checkInTicket(
+    @Body() dto: CheckInTicketDto,
+    @CurrentUser() user: { sub: string },
+  ) {
+    return this.registrationsService.checkInTicket(dto.ticketCode, user.sub, dto.eventId);
   }
 }

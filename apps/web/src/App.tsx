@@ -11,6 +11,8 @@ import {
   markNotificationAsRead,
 } from './lib/api';
 import { AuthPage } from './pages/AuthPage';
+import { AdminPage } from './pages/AdminPage';
+import { AdminCheckInPage } from './pages/AdminCheckInPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CreateEventPage } from './pages/CreateEventPage';
 import { CompanyPage } from './pages/CompanyPage';
@@ -702,6 +704,8 @@ export default function App() {
         <Route path="/events/:eventId" element={<EventDetailsPage />} />
         <Route path="/companies/:companyId" element={<CompanyPage />} />
         <Route path="/create-event" element={<CreateEventPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/check-in" element={<AdminCheckInPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/account" element={<TicketsPage />} />

@@ -198,6 +198,14 @@ export function EventDetailsPage() {
     locale === "uk-UA"
       ? "Коментарі закриті автором."
       : "Comments were closed by the author.";
+  const effectiveCommentsClosedNotice =
+    locale === "uk-UA"
+      ? event?.commentsClosedByAdmin
+        ? "Коментарі закриті адміном."
+        : "Коментарі закриті автором."
+      : event?.commentsClosedByAdmin
+        ? "Comments were closed by an admin."
+        : "Comments were closed by the author.";
   const checkoutCopy =
     locale === "uk-UA"
       ? {
@@ -318,6 +326,8 @@ export function EventDetailsPage() {
     return false;
   }
   const isOrganizer = Boolean(user?.id && event?.organizer?.id === user.id);
+  const isAdmin = Boolean(user?.isAdmin);
+  const canManageEvent = isOrganizer || isAdmin;
   const organizerCompany = event?.company ?? null;
   const isOrganizerCompanyOwner = Boolean(
     organizerCompany &&
@@ -873,7 +883,38 @@ export function EventDetailsPage() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />{" "}
+              {canManageEvent ? (
+                <div className="form-actions settings-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => setOrganizerSettingsModalOpen(true)}
+                  >
+                    {locale === "uk-UA" ? "Адмін панель" : "Admin panel"}
+                  </button>
+                </div>
+              ) : null}
             </div>
+          ) : null}{" "}
+          {canManageEvent ? (
+            <article className="organizer-settings-card event-admin-panel-card">
+              <span className="eyebrow">{locale === "uk-UA" ? "Адмін панель" : "Admin panel"}</span>
+              <h3>{locale === "uk-UA" ? "Керуйте цією подією" : "Manage this event"}</h3>
+              <p className="muted">
+                {locale === "uk-UA"
+                  ? "Редагуйте подію, закривайте коментарі та змінюйте ключові налаштування в одному місці."
+                  : "Edit the event, close comments, and update key settings in one place."}
+              </p>
+              <div className="form-actions settings-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => setOrganizerSettingsModalOpen(true)}
+                >
+                  {locale === "uk-UA" ? "Відкрити адмін панель" : "Open admin panel"}
+                </button>
+              </div>
+            </article>
           ) : null}{" "}
         </article>{" "}
 
@@ -883,7 +924,7 @@ export function EventDetailsPage() {
             {copy.eventDetails.commentsEyebrow}
           </span>{" "}
           {event.commentAccess === "closed" ? (
-            <p className="notice">{commentsClosedNotice}</p>
+            <p className="notice">{effectiveCommentsClosedNotice}</p>
           ) : token &&
             (event.commentAccess === "everyone" ||
               isOrganizer ||
@@ -1098,7 +1139,7 @@ export function EventDetailsPage() {
             {copy.common.organizer}:{" "}
             {event.organizer?.displayName ?? copy.common.communityHost}{" "}
           </p>{" "}
-          {isEventFinished && !isOrganizer ? (
+          {isEventFinished && !canManageEvent ? (
             <p className="notice warning">{eventFinishedText}</p>
           ) : registration?.status === "confirmed" ? (
             <>
@@ -1638,13 +1679,15 @@ export function EventDetailsPage() {
           </div>
         </div>
       ) : null}{" "}
-      {organizerSettingsModalOpen && isOrganizer ? (
+      {organizerSettingsModalOpen && canManageEvent ? (
         <div className="settings-modal-backdrop" onClick={() => setOrganizerSettingsModalOpen(false)}>
           <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="settings-modal-head">
               <div>
-                <span className="eyebrow">{copy.eventDetails.organizerSettingsEyebrow}</span>
-                <h2 style={{ margin: "8px 0 4px" }}>{copy.eventDetails.organizerSettingsTitle}</h2>
+                <span className="eyebrow">{locale === "uk-UA" ? "Адмін панель" : "Admin panel"}</span>
+                <h2 style={{ margin: "8px 0 4px" }}>
+                  {locale === "uk-UA" ? "Керування подією" : "Manage event"}
+                </h2>
                 {isEventFinished ? <p className="notice warning" style={{ marginTop: 8 }}>{organizerFinishedHint}</p> : null}
               </div>
               <button type="button" className="settings-modal-close" onClick={() => setOrganizerSettingsModalOpen(false)}>✕</button>

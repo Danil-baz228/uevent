@@ -1013,9 +1013,27 @@ export function TicketsPage() {
           </div>
 
           <div className="admin-actions-grid">
+            {user.isAdmin ? (
+              <Link to="/admin" className="related-card admin-action-card">
+                <strong>{language === 'uk' ? 'Глобальна адмін-панель' : 'Global admin panel'}</strong>
+                <span className="muted">
+                  {language === 'uk'
+                    ? 'Користувачі, компанії, події та коментарі всієї платформи'
+                    : 'Users, companies, events, and comments across the platform'}
+                </span>
+              </Link>
+            ) : null}
             <Link to="/create-event" className="related-card admin-action-card">
               <strong>{adminCopy.createEvent}</strong>
               <span className="muted">{copy.nav.createEvent}</span>
+            </Link>
+            <Link to="/admin/check-in" className="related-card admin-action-card">
+              <strong>{language === 'uk' ? 'Перевірка QR-квитків' : 'QR ticket check-in'}</strong>
+              <span className="muted">
+                {language === 'uk'
+                  ? 'Сканер і ручна перевірка квитків'
+                  : 'Scanner and manual ticket verification'}
+              </span>
             </Link>
             <button
               type="button"

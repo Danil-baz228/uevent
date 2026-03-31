@@ -23,6 +23,7 @@ type CreateUserInput = {
   refreshTokenHash?: string | null;
   interests?: string[];
   subscribedCompanyIds?: string[];
+  isAdmin?: boolean;
   createdAt?: Date;
 };
 
@@ -47,6 +48,7 @@ type CreateEventInput = {
   notifyOnNewAttendee?: boolean;
   commentAccess?: EventEntity['commentAccess'];
   commentsClosed?: boolean;
+  commentsClosedByAdmin?: boolean;
   organizerId?: string | null;
   companyId?: string | null;
   createdAt?: Date;
@@ -88,6 +90,8 @@ type CreateRegistrationInput = {
   paymentReceiptPreviewPath?: string | null;
   paymentReceiptMessageId?: string | null;
   paymentReceiptSentAt?: Date | null;
+  checkedInAt?: Date | null;
+  checkedInByUserId?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -130,6 +134,7 @@ export class InMemoryDataService {
       displayName: 'Mila Organizer',
       passwordHash: hashPassword('demo12345'),
       interests: ['networking', 'community', 'events'],
+      isAdmin: true,
       createdAt: new Date('2026-02-11T09:00:00.000Z'),
     });
 
@@ -139,6 +144,7 @@ export class InMemoryDataService {
       displayName: 'Alex Guest',
       passwordHash: hashPassword('demo12345'),
       interests: ['design', 'music', 'meetups'],
+      isAdmin: false,
       createdAt: new Date('2026-02-18T12:00:00.000Z'),
     });
 
@@ -175,6 +181,7 @@ export class InMemoryDataService {
         attendeeVisibility: 'everyone',
         notifyOnNewAttendee: true,
         commentAccess: 'everyone',
+        commentsClosedByAdmin: false,
         organizerId: organizer.id,
         companyId: 'cmp-demo-main',
         createdAt: new Date('2026-03-01T10:00:00.000Z'),
@@ -198,6 +205,7 @@ export class InMemoryDataService {
         attendeeVisibility: 'everyone',
         notifyOnNewAttendee: true,
         commentAccess: 'everyone',
+        commentsClosedByAdmin: false,
         organizerId: organizer.id,
         companyId: 'cmp-demo-main',
         createdAt: new Date('2026-03-02T11:00:00.000Z'),
@@ -221,6 +229,7 @@ export class InMemoryDataService {
         attendeeVisibility: 'everyone',
         notifyOnNewAttendee: true,
         commentAccess: 'everyone',
+        commentsClosedByAdmin: false,
         organizerId: organizer.id,
         companyId: 'cmp-demo-main',
         createdAt: new Date('2026-03-03T12:00:00.000Z'),
@@ -257,6 +266,8 @@ export class InMemoryDataService {
         paymentReceiptPreviewPath: null,
         paymentReceiptMessageId: null,
         paymentReceiptSentAt: null,
+        checkedInAt: null,
+        checkedInByUserId: null,
         createdAt: new Date('2026-03-10T09:30:00.000Z'),
         updatedAt: new Date('2026-03-10T09:30:00.000Z'),
       }),
@@ -356,10 +367,38 @@ export class InMemoryDataService {
       .map((item) => this.hydrateCompanyNews(item));
   }
 
+  listCompanyNews() {
+    return this.companyNews.map((item) => this.hydrateCompanyNews(item));
+  }
+
   createCompanyNews(input: CreateCompanyNewsInput) {
     const newsItem = this.buildCompanyNews(input);
     this.companyNews.push(newsItem);
     return this.hydrateCompanyNews(newsItem);
+  }
+
+  removeCompany(id: string) {
+    const companyIndex = this.companies.findIndex((candidate) => candidate.id === id);
+
+    if (companyIndex === -1) {
+      return false;
+    }
+
+    this.companies.splice(companyIndex, 1);
+
+    for (let index = this.companyNews.length - 1; index >= 0; index -= 1) {
+      if (this.companyNews[index]?.companyId === id) {
+        this.companyNews.splice(index, 1);
+      }
+    }
+
+    for (const event of this.events) {
+      if (event.companyId === id) {
+        event.companyId = null;
+      }
+    }
+
+    return true;
   }
 
   listEvents() {
@@ -416,6 +455,10 @@ export class InMemoryDataService {
     return this.comments
       .filter((comment) => comment.eventId === eventId)
       .map((comment) => this.hydrateComment(comment));
+  }
+
+  listComments() {
+    return this.comments.map((comment) => this.hydrateComment(comment));
   }
 
   findCommentById(commentId: string) {
@@ -559,6 +602,7 @@ export class InMemoryDataService {
       passwordResetTokenExpiresAt: null,
       interests: input.interests ?? [],
       subscribedCompanyIds: input.subscribedCompanyIds ?? [],
+      isAdmin: input.isAdmin ?? false,
       createdAt: input.createdAt ?? new Date(),
       events: [],
       companies: [],
@@ -592,6 +636,7 @@ export class InMemoryDataService {
       commentAccess: input.commentAccess ?? 'everyone',
       commentsClosed:
         input.commentsClosed ?? (input.commentAccess ? input.commentAccess === 'closed' : false),
+      commentsClosedByAdmin: input.commentsClosedByAdmin ?? false,
       organizerId: input.organizerId ?? null,
       companyId: input.companyId ?? null,
       createdAt: input.createdAt ?? new Date(),
@@ -648,6 +693,8 @@ export class InMemoryDataService {
       paymentReceiptPreviewPath: input.paymentReceiptPreviewPath ?? null,
       paymentReceiptMessageId: input.paymentReceiptMessageId ?? null,
       paymentReceiptSentAt: input.paymentReceiptSentAt ?? null,
+      checkedInAt: input.checkedInAt ?? null,
+      checkedInByUserId: input.checkedInByUserId ?? null,
       createdAt: input.createdAt ?? new Date(),
       updatedAt: input.updatedAt ?? input.createdAt ?? new Date(),
       event: null as never,
@@ -771,6 +818,10 @@ export class InMemoryDataService {
       paymentReceiptSentAt: registration.paymentReceiptSentAt
         ? new Date(registration.paymentReceiptSentAt)
         : null,
+      checkedInAt: registration.checkedInAt
+        ? new Date(registration.checkedInAt)
+        : null,
+      checkedInByUserId: registration.checkedInByUserId ?? null,
       event: this.findEventById(registration.eventId) as EventEntity,
       user: this.findUserById(registration.userId) as UserEntity,
     };

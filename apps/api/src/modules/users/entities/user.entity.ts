@@ -36,6 +36,9 @@ export class UserEntity {
   @Column('uuid', { array: true, default: '{}' })
   subscribedCompanyIds!: string[];
 
+  @Column({ default: false })
+  isAdmin!: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 

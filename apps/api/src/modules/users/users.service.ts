@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -11,6 +12,7 @@ import { UserEntity } from './entities/user.entity';
 export class UsersService {
   constructor(
     private readonly inMemoryData: InMemoryDataService,
+    private readonly configService: ConfigService,
     @Optional()
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity> | undefined,
@@ -112,6 +114,7 @@ export class UsersService {
       id: user.id,
       email: user.email,
       displayName: user.displayName,
+      isAdmin: user.isAdmin || this.isAdminEmail(user.email),
       interests: user.interests,
       subscribedCompanyIds: user.subscribedCompanyIds ?? [],
       companies:
@@ -131,5 +134,18 @@ export class UsersService {
             })),
       createdAt: user.createdAt,
     };
+  }
+
+  private isAdminEmail(email: string) {
+    const configuredAdmins = (this.configService.get<string>('ADMIN_EMAILS', '') ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (configuredAdmins.length === 0) {
+      return true;
+    }
+
+    return configuredAdmins.includes(email.toLowerCase());
   }
 }

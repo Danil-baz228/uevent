@@ -29,6 +29,9 @@ import { AddEventRedirectAfterPurchase1760000000016 } from './migrations/1760000
 import { AddCompanySubscriptions1760000000017 } from './migrations/1760000000017-AddCompanySubscriptions';
 import { AddRegistrationNameVisibility1760000000018 } from './migrations/1760000000018-AddRegistrationNameVisibility';
 import { AddPaymentReceiptArtifacts1760000000019 } from './migrations/1760000000019-AddPaymentReceiptArtifacts';
+import { AddRegistrationCheckInFields1760000000020 } from './migrations/1760000000020-AddRegistrationCheckInFields';
+import { AddCommentsClosedByAdmin1760000000021 } from './migrations/1760000000021-AddCommentsClosedByAdmin';
+import { AddUserIsAdmin1760000000022 } from './migrations/1760000000022-AddUserIsAdmin';
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -67,6 +70,9 @@ const dataSource = new DataSource({
     AddCompanySubscriptions1760000000017,
     AddRegistrationNameVisibility1760000000018,
     AddPaymentReceiptArtifacts1760000000019,
+    AddRegistrationCheckInFields1760000000020,
+    AddCommentsClosedByAdmin1760000000021,
+    AddUserIsAdmin1760000000022,
   ],
   synchronize: false,
 });

@@ -4,6 +4,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   FindOptionsOrder,
@@ -31,6 +32,7 @@ import { UserEntity } from '../users/entities/user.entity';
 @Injectable()
 export class EventsService {
   constructor(
+    private readonly configService: ConfigService,
     private readonly inMemoryData: InMemoryDataService,
     @Optional()
     @InjectRepository(EventEntity)
@@ -349,6 +351,7 @@ export class EventsService {
 
   async update(id: string, dto: UpdateEventDto, organizerId: string) {
     const promoCodes = dto.promoCodes !== undefined ? this.normalizePromoCodes(dto.promoCodes) : undefined;
+    const managedByAdmin = await this.isAdminUser(organizerId);
 
     if (!this.eventsRepository) {
       const event = this.inMemoryData.findEventById(id);
@@ -357,7 +360,7 @@ export class EventsService {
         throw new NotFoundException(`Event ${id} was not found`);
       }
 
-      this.ensureOrganizerAccess(event, organizerId);
+      this.ensureOrganizerAccess(event, organizerId, managedByAdmin);
       const wasPublished = this.isEventPublished(event);
 
       if (dto.companyId !== undefined) {
@@ -401,12 +404,14 @@ export class EventsService {
           ? {
               commentAccess: dto.commentAccess,
               commentsClosed: dto.commentAccess === 'closed',
+              commentsClosedByAdmin: dto.commentAccess === 'closed' ? managedByAdmin : false,
             }
           : {}),
         ...(dto.commentsClosed !== undefined
           ? {
               commentsClosed: dto.commentsClosed,
               commentAccess: dto.commentsClosed ? 'closed' : 'everyone',
+              commentsClosedByAdmin: dto.commentsClosed ? managedByAdmin : false,
             }
           : {}),
       });
@@ -435,7 +440,7 @@ export class EventsService {
       throw new NotFoundException(`Event ${id} was not found`);
     }
 
-    this.ensureOrganizerAccess(event, organizerId);
+    this.ensureOrganizerAccess(event, organizerId, managedByAdmin);
     const wasPublished = this.isEventPublished(event);
 
     if (dto.title !== undefined) {
@@ -522,11 +527,13 @@ export class EventsService {
     if (dto.commentAccess !== undefined) {
       event.commentAccess = dto.commentAccess;
       event.commentsClosed = dto.commentAccess === 'closed';
+      event.commentsClosedByAdmin = dto.commentAccess === 'closed' ? managedByAdmin : false;
     }
 
     if (dto.commentsClosed !== undefined) {
       event.commentsClosed = dto.commentsClosed;
       event.commentAccess = dto.commentsClosed ? 'closed' : 'everyone';
+      event.commentsClosedByAdmin = dto.commentsClosed ? managedByAdmin : false;
     }
 
     const savedEvent = await this.eventsRepository.save(event);
@@ -543,6 +550,7 @@ export class EventsService {
   }
 
   async remove(id: string, organizerId: string) {
+    const managedByAdmin = await this.isAdminUser(organizerId);
     if (!this.eventsRepository || !this.commentsRepository || !this.registrationsRepository) {
       const event = this.inMemoryData.findEventById(id);
 
@@ -550,7 +558,7 @@ export class EventsService {
         throw new NotFoundException(`Event ${id} was not found`);
       }
 
-      this.ensureOrganizerAccess(event, organizerId);
+      this.ensureOrganizerAccess(event, organizerId, managedByAdmin);
       this.inMemoryData.removeEvent(id);
 
       return { message: 'Event deleted' };
@@ -564,7 +572,7 @@ export class EventsService {
       throw new NotFoundException(`Event ${id} was not found`);
     }
 
-    this.ensureOrganizerAccess(event, organizerId);
+    this.ensureOrganizerAccess(event, organizerId, managedByAdmin);
 
     await this.commentsRepository.delete({ eventId: id });
     await this.registrationsRepository.delete({ eventId: id });
@@ -675,6 +683,7 @@ export class EventsService {
       notifyOnNewAttendee: event.notifyOnNewAttendee,
       commentAccess: event.commentAccess,
       commentsClosed: event.commentsClosed,
+      commentsClosedByAdmin: event.commentsClosedByAdmin,
       isPublished: this.isEventPublished(event),
       organizer: event.organizer
         ? {
@@ -687,10 +696,35 @@ export class EventsService {
     };
   }
 
-  private ensureOrganizerAccess(event: EventEntity, organizerId: string) {
+  private ensureOrganizerAccess(event: EventEntity, organizerId: string, isAdmin = false) {
+    if (isAdmin) {
+      return;
+    }
+
     if (event.organizerId !== organizerId) {
       throw new ForbiddenException('Only the organizer can manage this event');
     }
+  }
+
+  private async isAdminUser(userId: string) {
+    const user = !this.usersRepository
+      ? this.inMemoryData.findUserById(userId)
+      : await this.usersRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      return false;
+    }
+
+    const configuredAdmins = (this.configService.get<string>('ADMIN_EMAILS', '') ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (configuredAdmins.length === 0) {
+      return true;
+    }
+
+    return configuredAdmins.includes(user.email.toLowerCase());
   }
 
   private normalizePromoCodes(
