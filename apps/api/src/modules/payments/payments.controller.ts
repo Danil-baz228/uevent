@@ -6,7 +6,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { PaymentsService } from './payments.service';
 import { ConfirmCheckoutSessionDto } from './dto/confirm-checkout-session.dto';
-import { CompletePaymentDto } from './dto/complete-payment.dto';
 
 @ApiTags('payments')
 @ApiBearerAuth()
@@ -26,10 +25,5 @@ export class PaymentsController {
     @CurrentUser() user: { sub: string },
   ) {
     return this.paymentsService.confirmCheckoutSession(dto.sessionId, user.sub);
-  }
-
-  @Post('complete')
-  completePayment(@Body() dto: CompletePaymentDto, @CurrentUser() user: { sub: string }) {
-    return this.paymentsService.completePayment(dto, user.sub);
   }
 }

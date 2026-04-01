@@ -15,7 +15,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { RegistrationsService } from '../registrations/registrations.service';
 import { UsersService } from '../users/users.service';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
-import { CompletePaymentDto } from './dto/complete-payment.dto';
 
 type ConfirmedRegistrationPayload = Awaited<
   ReturnType<RegistrationsService['confirmStripeRegistration']>
@@ -213,90 +212,6 @@ export class PaymentsService {
       sessionId,
       wasConfirmed,
     });
-  }
-
-  async completePayment(dto: CompletePaymentDto, userId: string) {
-    const quantity = dto.quantity ?? 1;
-    const event = await this.registrationsService.findEventForCheckout(dto.eventId);
-    const promo = this.resolvePromo(event, dto.promoCode);
-    const amount = Number(event.price);
-    const discountedAmount = Number(
-      (amount * (1 - (promo?.discountPercent ?? 0) / 100)).toFixed(2),
-    );
-    const finalAmount = discountedAmount * quantity;
-    const cardNumber = dto.cardNumber.replace(/\s+/g, '');
-    const expiry = dto.expiry.trim();
-    const cvc = dto.cvc.trim();
-    const cardholderName = dto.cardholderName.trim();
-
-    if (!cardholderName) {
-      throw new BadRequestException('Cardholder name is required');
-    }
-
-    if (!/^\d{16}$/.test(cardNumber)) {
-      throw new BadRequestException('Card number must contain 16 digits');
-    }
-
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      throw new BadRequestException('Expiry must be in MM/YY format');
-    }
-
-    const [expiryMonth] = expiry.split('/').map((value) => Number(value));
-
-    if (!expiryMonth || expiryMonth < 1 || expiryMonth > 12) {
-      throw new BadRequestException('Expiry month must be between 01 and 12');
-    }
-
-    if (!/^\d{3,4}$/.test(cvc)) {
-      throw new BadRequestException('CVC must contain 3 or 4 digits');
-    }
-
-    const sessionId = `embedded_${randomUUID().replace(/-/g, '')}`;
-    const attendee = await this.usersService.getCurrentUser(userId);
-    const { registration } =
-      await this.registrationsService.createPendingStripeRegistration(
-        dto.eventId,
-        userId,
-        quantity,
-        finalAmount,
-      );
-
-    await this.registrationsService.attachCheckoutSession(
-      registration.id,
-      sessionId,
-      'paid',
-    );
-    await this.registrationsService.markStripePaymentStatus(
-      registration.id,
-      'paid',
-    );
-
-    const confirmedRegistration = await this.registrationsService.confirmStripeRegistration(
-      registration,
-      'paid',
-    );
-
-    const finalizedRegistration = await this.finalizeSuccessfulPayment({
-      registration: { ...registration, event },
-      confirmedRegistration,
-      attendee,
-      userId,
-      sessionId,
-      wasConfirmed: false,
-    });
-
-    return {
-      registration: finalizedRegistration,
-      redirectUrl: event.redirectAfterPurchaseUrl ?? '/account',
-      amount: Math.round(finalAmount * 100),
-      originalAmount: Math.round(amount * quantity * 100),
-      discountPercent: promo?.discountPercent ?? 0,
-      promoCode: promo?.code ?? null,
-      eventId: event.id,
-      eventTitle: event.title,
-      sessionId,
-      status: 'paid',
-    };
   }
 
   private async finalizeSuccessfulPayment(input: {

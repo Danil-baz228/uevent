@@ -359,8 +359,47 @@ export class RegistrationsService {
         );
       }
 
-      await this.ensureCapacity(event.id, quantity, event.capacity);
-      await this.ensureNoExistingRegistration(event.id, userId);
+      const existingRegistration = this.inMemoryData.findRegistrationByEventAndUser(
+        event.id,
+        userId,
+      );
+
+      if (existingRegistration?.status === 'confirmed') {
+        throw new ConflictException('You already have a registration for this event');
+      }
+
+      await this.ensureCapacity(
+        event.id,
+        quantity,
+        event.capacity,
+        existingRegistration?.id,
+      );
+
+      if (existingRegistration) {
+        const registration = this.inMemoryData.updateRegistration(existingRegistration.id, {
+          status: 'pending_payment',
+          paymentProvider: 'stripe',
+          quantity,
+          amountTotal: amountTotal ?? eventPrice * quantity,
+          stripeCheckoutSessionId: null,
+          stripePaymentStatus: 'unpaid',
+          ticketAssetPath: null,
+          paymentReceiptPreviewPath: null,
+          paymentReceiptMessageId: null,
+          paymentReceiptSentAt: null,
+          checkedInAt: null,
+          checkedInByUserId: null,
+        });
+
+        if (!registration) {
+          throw new NotFoundException('Registration was not found');
+        }
+
+        return {
+          registration,
+          event,
+        };
+      }
 
       const registration = this.inMemoryData.createRegistration({
         eventId: event.id,
@@ -406,8 +445,50 @@ export class RegistrationsService {
       );
     }
 
-    await this.ensureCapacity(event.id, quantity, event.capacity);
-    await this.ensureNoExistingRegistration(event.id, userId);
+    const existingRegistration = await this.registrationsRepository.findOne({
+      where: { eventId: event.id, userId },
+    });
+
+    if (existingRegistration?.status === 'confirmed') {
+      throw new ConflictException('You already have a registration for this event');
+    }
+
+    await this.ensureCapacity(
+      event.id,
+      quantity,
+      event.capacity,
+      existingRegistration?.id,
+    );
+
+    if (existingRegistration) {
+      await this.registrationsRepository.update(existingRegistration.id, {
+        status: 'pending_payment',
+        paymentProvider: 'stripe',
+        quantity,
+        amountTotal: amountTotal ?? eventPrice * quantity,
+        stripeCheckoutSessionId: null,
+        stripePaymentStatus: 'unpaid',
+        ticketAssetPath: null,
+        paymentReceiptPreviewPath: null,
+        paymentReceiptMessageId: null,
+        paymentReceiptSentAt: null,
+        checkedInAt: null,
+        checkedInByUserId: null,
+      });
+
+      const registration = await this.registrationsRepository.findOne({
+        where: { id: existingRegistration.id },
+      });
+
+      if (!registration) {
+        throw new NotFoundException('Registration was not found');
+      }
+
+      return {
+        registration,
+        event,
+      };
+    }
 
     const registration = await this.registrationsRepository.save(
       this.registrationsRepository.create({
@@ -567,10 +648,16 @@ export class RegistrationsService {
     }
   }
 
-  private async ensureCapacity(eventId: string, quantity: number, capacity: number) {
+  private async ensureCapacity(
+    eventId: string,
+    quantity: number,
+    capacity: number,
+    ignoredRegistrationId?: string,
+  ) {
     if (!this.registrationsRepository) {
       const reservedSpots = this.inMemoryData
         .listRegistrationsByEvent(eventId, ['pending_payment', 'confirmed'])
+        .filter((registration) => registration.id !== ignoredRegistrationId)
         .reduce((sum, registration) => sum + registration.quantity, 0);
 
       if (reservedSpots + quantity > capacity) {
@@ -586,7 +673,9 @@ export class RegistrationsService {
         status: In<RegistrationStatus>(['pending_payment', 'confirmed']),
       },
     });
-    const reservedSpots = existingRegistrations.reduce(
+    const reservedSpots = existingRegistrations
+      .filter((registration) => registration.id !== ignoredRegistrationId)
+      .reduce(
       (sum, registration) => sum + registration.quantity,
       0,
     );

@@ -6,48 +6,34 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { isDatabaseEnabled } from './config/database-mode';
 import { validateEnvironment } from './config/env.validation';
+import { createDatabaseOptions } from './database/database.config';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommentsModule } from './modules/comments/comments.module';
-import { EventCommentEntity } from './modules/comments/entities/event-comment.entity';
 import { CompaniesModule } from './modules/companies/companies.module';
-import { CompanyNewsEntity } from './modules/companies/entities/company-news.entity';
-import { CompanyEntity } from './modules/companies/entities/company.entity';
 import { DatabaseSeederModule } from './modules/database-seeder/database-seeder.module';
-import { EventEntity } from './modules/events/entities/event.entity';
 import { EventsModule } from './modules/events/events.module';
 import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments/payments.module';
-import { NotificationEntity } from './modules/notifications/entities/notification.entity';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-import { EventRegistrationEntity } from './modules/registrations/entities/event-registration.entity';
 import { RegistrationsModule } from './modules/registrations/registrations.module';
 import { InMemoryDataModule } from './modules/in-memory-data/in-memory-data.module';
-import { UserEntity } from './modules/users/entities/user.entity';
 import { UsersModule } from './modules/users/users.module';
 
 const databaseImports = isDatabaseEnabled
   ? [
       TypeOrmModule.forRootAsync({
         inject: [ConfigService],
-        useFactory: (configService: ConfigService) => ({
-          type: 'postgres' as const,
-          host: configService.get<string>('DATABASE_HOST'),
-          port: Number(configService.get<number>('DATABASE_PORT')),
-          username: configService.get<string>('DATABASE_USER'),
-          password: configService.get<string>('DATABASE_PASSWORD'),
-          database: configService.get<string>('DATABASE_NAME'),
-          entities: [
-            UserEntity,
-            CompanyEntity,
-            CompanyNewsEntity,
-            EventEntity,
-            EventRegistrationEntity,
-            EventCommentEntity,
-            NotificationEntity,
-          ],
-          synchronize: false,
-        }),
+        useFactory: (configService: ConfigService) =>
+          createDatabaseOptions({
+            host: configService.getOrThrow<string>('DATABASE_HOST'),
+            port: Number(configService.getOrThrow<number>('DATABASE_PORT')),
+            username: configService.getOrThrow<string>('DATABASE_USER'),
+            password: configService.getOrThrow<string>('DATABASE_PASSWORD'),
+            database: configService.getOrThrow<string>('DATABASE_NAME'),
+            synchronize: false,
+            migrationsRun: true,
+          }),
       }),
     ]
   : [];

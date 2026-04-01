@@ -7,7 +7,7 @@ import {
   ApiRegistration,
   EventDetailsResponse,
   createEventComment,
-  completePayment,
+  createCheckoutSession,
   createRegistration,
   deleteEvent,
   deleteEventComment,
@@ -63,7 +63,6 @@ export function EventDetailsPage() {
     useState<"idle" | "saving">("idle");
   const [organizerSubscriptionMessage, setOrganizerSubscriptionMessage] =
     useState("");
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [checkoutMessage, setCheckoutMessage] = useState("");
   const [checkoutQuantity, setCheckoutQuantity] = useState("1");
@@ -77,14 +76,6 @@ export function EventDetailsPage() {
     discountPercent: "10",
   });
   const [promoMessage, setPromoMessage] = useState("");
-  const [paymentSuccessOpen, setPaymentSuccessOpen] = useState(false);
-  const [paymentSuccessEmail, setPaymentSuccessEmail] = useState("");
-  const [paymentForm, setPaymentForm] = useState({
-    cardholderName: "",
-    cardNumber: "",
-    expiry: "",
-    cvc: "",
-  });
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
@@ -234,6 +225,30 @@ export function EventDetailsPage() {
           quantity: "Ticket quantity",
           total: "Total",
         };
+  const checkoutQuantityLabel =
+    locale === "uk-UA" ? "Кількість квитків" : "Ticket quantity";
+  const checkoutTotalLabel = locale === "uk-UA" ? "Сума" : "Total";
+  const checkoutSubtitle =
+    locale === "uk-UA"
+      ? "Stripe Checkout відкриється на окремій сторінці."
+      : "Stripe Checkout opens on a separate hosted page.";
+  const checkoutActionLabel =
+    locale === "uk-UA" ? "Відкрити Stripe Checkout" : "Open Stripe Checkout";
+  const checkoutRetryLabel =
+    locale === "uk-UA"
+      ? "Повернутися до Stripe Checkout"
+      : "Return to Stripe Checkout";
+  const checkoutPendingMessage =
+    locale === "uk-UA"
+      ? "Оплату ще не завершено. Ви можете знову відкрити Stripe Checkout і завершити тестовий платіж."
+      : "Payment is still pending. You can reopen Stripe Checkout and finish the test payment.";
+  const checkoutTestModeMessage =
+    locale === "uk-UA"
+      ? "Тестовий режим Stripe: використовуйте картку 4242 4242 4242 4242, будь-яку майбутню дату та будь-який CVC."
+      : "Stripe test mode: use card 4242 4242 4242 4242, any future date, and any CVC.";
+  const paymentSuccessOpen = false;
+  const paymentSuccessEmail = "";
+  const setPaymentSuccessOpen = (_value: boolean) => undefined;
   useEffect(() => {
     let active = true;
     async function loadEvent() {
@@ -393,25 +408,8 @@ export function EventDetailsPage() {
       setActionState("idle");
     }
   }
-  function formatCardNumber(value: string) {
-    return value
-      .replace(/\D/g, "")
-      .slice(0, 16)
-      .replace(/(.{4})/g, "$1 ")
-      .trim();
-  }
-  function formatCardExpiry(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 4);
-    if (digits.length <= 2) {
-      return digits;
-    }
-    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  }
-  const checkoutDiscount = promoCode.trim().length > 0 ? 0 : 0;
   const checkoutTotal =
-    Number(event?.price ?? 0) *
-    Number(checkoutQuantity || 1) *
-    (1 - checkoutDiscount / 100);
+    Number(event?.price ?? 0) * Math.max(1, Number(checkoutQuantity) || 1);
   const promoEditorCopy =
     locale === "uk-UA"
       ? {
@@ -443,7 +441,7 @@ export function EventDetailsPage() {
           add: "Add promo code",
           done: "Done",
           empty: "No promo codes yet",
-          hint: "Buyers will be able to use these codes in the payment window.",
+          hint: "Buyers will be able to apply these codes before Stripe Checkout opens.",
           tileTitle: "Promo codes",
           tileText: "Add, edit, and remove discount codes.",
           publishTitle: "Publication",
@@ -456,23 +454,6 @@ export function EventDetailsPage() {
           discountLabel: (value: number) => `${value}% discount`,
           edit: "Edit promo codes",
         };
-  function openCheckoutModal() {
-    if (!requireAuth() || !event) {
-      return;
-    }
-    setMessage("");
-    setCommentMessage("");
-    setCheckoutMessage("");
-    setPromoCode("");
-    setCheckoutQuantity("1");
-    setPaymentForm({
-      cardholderName: user?.displayName ?? "",
-      cardNumber: "",
-      expiry: "",
-      cvc: "",
-    });
-    setCheckoutModalOpen(true);
-  }
   function handleAddPromoCode() {
     const code = promoForm.code.trim().toUpperCase();
     const discountPercent = Number(promoForm.discountPercent);
@@ -502,54 +483,33 @@ export function EventDetailsPage() {
     );
     setPromoMessage("");
   }
-  function closeCheckoutModal() {
-    if (actionState === "paying") {
-      return;
-    }
-    setCheckoutModalOpen(false);
-    setCheckoutMessage("");
-  }
-  async function handleCheckout(eventForm: FormEvent<HTMLFormElement>) {
-    eventForm.preventDefault();
+  async function handleCheckout() {
     if (!requireAuth() || !token || !event) {
       return;
     }
+
+    const quantity = Math.max(1, Number(checkoutQuantity) || 1);
+
     setActionState("paying");
     setMessage("");
     setCommentMessage("");
     setCheckoutMessage("");
     try {
-      const result = await completePayment(
+      const result = await createCheckoutSession(
         {
           eventId: event.id,
-          quantity: Math.max(1, Number(checkoutQuantity) || 1),
+          quantity,
           promoCode: promoCode.trim() || undefined,
-          cardholderName: paymentForm.cardholderName,
-          cardNumber: paymentForm.cardNumber,
-          expiry: paymentForm.expiry,
-          cvc: paymentForm.cvc,
         },
         token,
       );
-      setRegistration(result.registration);
-      setCheckoutModalOpen(false);
-      setPromoCode("");
-      setCheckoutQuantity("1");
-      setPaymentForm({
-        cardholderName: "",
-        cardNumber: "",
-        expiry: "",
-        cvc: "",
-      });
-      setPaymentSuccessEmail(user?.email ?? "");
-      setPaymentSuccessOpen(true);
-      if (result.redirectUrl) {
-        const target = /^https?:\/\//i.test(result.redirectUrl)
-          ? result.redirectUrl
-          : `${window.location.origin}${result.redirectUrl.startsWith("/") ? result.redirectUrl : `/${result.redirectUrl}`}`;
-        setTimeout(() => { window.location.assign(target); }, 3000);
-        return;
+
+      if (!result.url) {
+        throw new Error(copy.eventDetails.buyFailed);
       }
+
+      window.location.assign(result.url);
+      return;
     } catch (error) {
       const nextMessage =
         error instanceof Error ? error.message : copy.eventDetails.buyFailed;
@@ -1194,18 +1154,67 @@ export function EventDetailsPage() {
             </>
           ) : !event.isPublished ? (
             <p className="notice warning">{publicationCopy.ticketNotice}</p>
-          ) : registration?.status === "pending_payment" ? (
-            <p className="notice">{copy.common.paymentPending}</p>
           ) : event.price > 0 ? (
-            <button
-              type="button"
-              className="primary-button"
-              disabled={!isReady || actionState === "paying"}
-              onClick={openCheckoutModal}
-            >
-              {" "}
-              {copy.common.buyTicket}{" "}
-            </button>
+            <>
+              <div className="form-grid">
+                <label className="field">
+                  <span>{checkoutQuantityLabel}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={event.capacity}
+                    value={checkoutQuantity}
+                    onChange={(event) =>
+                      setCheckoutQuantity(
+                        event.target.value.replace(/\D/g, "").slice(0, 3) || "1",
+                      )
+                    }
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>{checkoutTotalLabel}</span>
+                  <input
+                    value={formatPrice(
+                      checkoutTotal,
+                      locale,
+                      copy.common.free,
+                    )}
+                    readOnly
+                  />
+                </label>
+              </div>
+              <label className="field">
+                <span>{checkoutCopy.promoCode}</span>
+                <input
+                  value={promoCode}
+                  onChange={(event) =>
+                    setPromoCode(event.target.value.toUpperCase())
+                  }
+                  placeholder="SPRING20"
+                />
+              </label>
+              <p className="muted">{checkoutSubtitle}</p>
+              <p className="muted">{checkoutTestModeMessage}</p>
+              {registration?.status === "pending_payment" ? (
+                <p className="notice">{checkoutPendingMessage}</p>
+              ) : null}
+              {checkoutMessage ? (
+                <p className="notice error">{checkoutMessage}</p>
+              ) : null}
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!isReady || actionState === "paying"}
+                onClick={() => void handleCheckout()}
+              >
+                {actionState === "paying"
+                  ? copy.common.openingStripe
+                  : registration?.status === "pending_payment"
+                    ? checkoutRetryLabel
+                    : checkoutActionLabel}
+              </button>
+            </>
           ) : (
             <button
               type="button"
@@ -1479,171 +1488,6 @@ export function EventDetailsPage() {
                 {promoEditorCopy.done}
               </button>{" "}
             </div>{" "}
-          </div>{" "}
-        </div>
-      ) : null}{" "}
-      {checkoutModalOpen ? (
-        <div className="settings-modal-backdrop" onClick={closeCheckoutModal}>
-          {" "}
-          <div
-            className="settings-modal settings-modal-compact"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {" "}
-            <div className="settings-modal-head">
-              {" "}
-              <div>
-                {" "}
-                <span className="eyebrow">
-                  {copy.eventDetails.ticketEyebrow}
-                </span>{" "}
-                <h2>{checkoutCopy.title}</h2>{" "}
-                <p className="muted">{checkoutCopy.subtitle}</p>{" "}
-              </div>{" "}
-              <button
-                type="button"
-                className="settings-modal-close"
-                onClick={closeCheckoutModal}
-              >
-                {" "}
-                x{" "}
-              </button>{" "}
-            </div>{" "}
-            <form className="settings-form" onSubmit={handleCheckout}>
-              {" "}
-              <div className="form-grid">
-                {" "}
-                <label className="field">
-                  {" "}
-                  <span>{checkoutCopy.quantity}</span>{" "}
-                  <input
-                    type="number"
-                    min="1"
-                    max={event.capacity}
-                    value={checkoutQuantity}
-                    onChange={(event) =>
-                      setCheckoutQuantity(
-                        event.target.value.replace(/\D/g, "").slice(0, 3) ||
-                          "1",
-                      )
-                    }
-                    required
-                  />{" "}
-                </label>{" "}
-                <label className="field">
-                  {" "}
-                  <span>{checkoutCopy.total}</span>{" "}
-                  <input
-                    value={formatPrice(
-                      Number(event.price) *
-                        Math.max(1, Number(checkoutQuantity) || 1),
-                      locale,
-                      copy.common.free,
-                    )}
-                    readOnly
-                  />{" "}
-                </label>{" "}
-              </div>{" "}
-              <label className="field">
-                {" "}
-                <span>{checkoutCopy.promoCode}</span>{" "}
-                <input
-                  value={promoCode}
-                  onChange={(event) =>
-                    setPromoCode(event.target.value.toUpperCase())
-                  }
-                  placeholder="SPRING20"
-                />{" "}
-              </label>{" "}
-              <label className="field">
-                {" "}
-                <span>{checkoutCopy.cardholderName}</span>{" "}
-                <input
-                  value={paymentForm.cardholderName}
-                  onChange={(event) =>
-                    setPaymentForm((current) => ({
-                      ...current,
-                      cardholderName: event.target.value,
-                    }))
-                  }
-                  required
-                />{" "}
-              </label>{" "}
-              <div className="form-grid">
-                {" "}
-                <label className="field">
-                  {" "}
-                  <span>{checkoutCopy.cardNumber}</span>{" "}
-                  <input
-                    value={paymentForm.cardNumber}
-                    onChange={(event) =>
-                      setPaymentForm((current) => ({
-                        ...current,
-                        cardNumber: formatCardNumber(event.target.value),
-                      }))
-                    }
-                    inputMode="numeric"
-                    placeholder="4242 4242 4242 4242"
-                    required
-                  />{" "}
-                </label>{" "}
-                <label className="field">
-                  {" "}
-                  <span>{checkoutCopy.expiry}</span>{" "}
-                  <input
-                    value={paymentForm.expiry}
-                    onChange={(event) =>
-                      setPaymentForm((current) => ({
-                        ...current,
-                        expiry: formatCardExpiry(event.target.value),
-                      }))
-                    }
-                    placeholder="12/28"
-                    required
-                  />{" "}
-                </label>{" "}
-              </div>{" "}
-              <label className="field">
-                {" "}
-                <span>{checkoutCopy.cvc}</span>{" "}
-                <input
-                  value={paymentForm.cvc}
-                  onChange={(event) =>
-                    setPaymentForm((current) => ({
-                      ...current,
-                      cvc: event.target.value,
-                    }))
-                  }
-                  inputMode="numeric"
-                  placeholder="123"
-                  required
-                />{" "}
-              </label>{" "}
-              {checkoutMessage ? (
-                <p className="notice error">{checkoutMessage}</p>
-              ) : null}{" "}
-              <div className="form-actions settings-actions">
-                {" "}
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={closeCheckoutModal}
-                >
-                  {" "}
-                  {checkoutCopy.close}{" "}
-                </button>{" "}
-                <button
-                  type="submit"
-                  className="primary-button"
-                  disabled={actionState === "paying"}
-                >
-                  {" "}
-                  {actionState === "paying"
-                    ? checkoutCopy.processing
-                    : checkoutCopy.submit}{" "}
-                </button>{" "}
-              </div>{" "}
-            </form>{" "}
           </div>{" "}
         </div>
       ) : null}{" "}

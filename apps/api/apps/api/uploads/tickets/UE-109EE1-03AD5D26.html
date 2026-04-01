@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Uevent Ticket</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #132033;
+        --muted: #5a6881;
+        --line: rgba(19, 32, 51, 0.12);
+        --card: #ffffff;
+        --panel: linear-gradient(135deg, #fef2d7, #f3f8ff 52%, #daf4ee 100%);
+        --accent: #d45a2b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: #f4f6fb;
+        color: var(--ink);
+        padding: 32px;
+      }
+      .ticket {
+        max-width: 880px;
+        margin: 0 auto;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 24px 80px rgba(30, 55, 90, 0.12);
+      }
+      .hero {
+        padding: 32px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+      .eyebrow {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.76);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      h1 {
+        margin: 16px 0 12px;
+        font-size: 36px;
+        line-height: 1.05;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        padding: 32px;
+      }
+      .cell {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        background: rgba(245, 248, 255, 0.68);
+      }
+      .label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .value {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .footer {
+        padding: 0 32px 32px;
+      }
+      .code {
+        display: inline-flex;
+        padding: 12px 16px;
+        border-radius: 16px;
+        background: #132033;
+        color: #f7fbff;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+      @media (max-width: 720px) {
+        body { padding: 16px; }
+        .grid { grid-template-columns: 1fr; padding: 20px; }
+        .hero { padding: 24px; }
+        .footer { padding: 0 20px 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="ticket">
+      <header class="hero">
+        <span class="eyebrow">Uevent ticket</span>
+        <h1>фывфвы</h1>
+        <p>
+          This ticket confirms paid access for dk.
+          Keep the code below and present it at check-in if the organizer asks.
+        </p>
+      </header>
+      <div class="grid">
+        <article class="cell">
+          <span class="label">Organizer</span>
+          <span class="value">фвы</span>
+        </article>
+        <article class="cell">
+          <span class="label">Starts at</span>
+          <span class="value">четвер, 16 квітня 2026 р. о 15:02</span>
+        </article>
+        <article class="cell">
+          <span class="label">City</span>
+          <span class="value">Київ</span>
+        </article>
+        <article class="cell">
+          <span class="label">Address</span>
+          <span class="value">Набережне шосе, Аскольдова Могила, Клов, Печерський район, Київ, 01008, Україна</span>
+        </article>
+        <article class="cell">
+          <span class="label">Quantity</span>
+          <span class="value">1</span>
+        </article>
+        <article class="cell">
+          <span class="label">Paid</span>
+          <span class="value">$1.00</span>
+        </article>
+      </div>
+      <footer class="footer">
+        <p><span class="label">Ticket code</span></p>
+        <p class="code">UE-109EE1-03AD5D26</p>
+        <div style="margin-top:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAAAklEQVR4AewaftIAAAP8SURBVO3BgXEjRxAEweoJ+O9yiwZobl+PixNBVmb6BUn/apC0GiStBkmrQdJqkLQaJK0GSatB0urFH0jCb9OWdyXhpC13SMKVtpwk4bdpy5VB0mqQtBokrQZJq0HSapC0GiStBkmrFzdpy6dIwh2S8K4k3KEtT2jLp0jCuwZJq0HSapC0GiStBkmrQdJqkLQaJK1ePCgJT2jLE9pyJQknbTlJwqdIwhPa8oRB0mqQtBokrQZJq0HSapC0GiStXuh/lYQ7JOFKW/TfDZJWg6TVIGk1SFoNklaDpNUgaTVIWr3QX0vClbY8JQm63yBpNUhaDZJWg6TVIGk1SFoNklaDpNWLB7XlJ2nLlSTcoS2foi0/ySBpNUhaDZJWg6TVIGk1SFoNklYvbpKE3yYJV9pykoRPkoTfZJC0GiStBkmrQdJqkLQaJK0GSatB0ir9gr61JLyrLfrvBkmrQdJqkLQaJK0GSatB0mqQtBokrV78gSSctOUkCVfacpKEk7ZcScJJWz5JW76DJJy05V1JOGnLuwZJq0HSapC0GiStBkmrQdJqkLR68Y0k4aQtJ0m40pY7JOFTJOGkLSdJuNKWOyThOxgkrQZJq0HSapC0GiStBkmrQdJqkLRKv3CQhDu05V1JeEJbPkkSrrTlJAknbbmShJO2vCsJd2jLlUHSapC0GiStBkmrQdJqkLQaJK0GSav0Cw9JwhPa8h0k4aQtJ0k4acsTkvCutnyKQdJqkLQaJK0GSatB0mqQtBokrQZJqxd/IAknbXlCW06S8B205SQJJ205ScKVtvwkSbhDW64MklaDpNUgaTVIWg2SVoOk1SBplX5BfyUJV9pyhySctOUnScKVtjxhkLQaJK0GSatB0mqQtBokrQZJq0HS6sUfSMJv05aTtrwrCSdtOUnCu9pykoR3teVdSbhDW64MklaDpNUgaTVIWg2SVoOk1SBpNUhavbhJWz5FEp6QhJO2nCThU7TlJAknbfkOBkmrQdJqkLQaJK0GSatB0mqQtHrxoCQ8oS1PSMJv05YrSThpy0kSrrTlCYOk1SBpNUhaDZJWg6TVIGk1SFoNklYv9NfaciUJJ0m4Q1velYQnJOGkLVeScNKWdw2SVoOk1SBpNUhaDZJWg6TVIGk1SFq90F9LwhPacpKEK225Q1uuJOGkLe9qy0kSTtpyZZC0GiStBkmrQdJqkLQaJK0GSasXD2rLT9KWK0n4JG05ScKVtjwhCU8YJK0GSatB0mqQtBokrQZJq0HSapC0enGTJPw2SXhCEt6VhJO2vCsJT2jLSRLeNUhaDZJWg6TVIGk1SFoNklaDpNUgaZV+QdK/GiStBkmrQdJqkLQaJK0GSatB0uofDqAGsG7nI1sAAAAASUVORK5CYII=" alt="QR Code" width="120" height="120" style="display:block;border-radius:12px;border:4px solid #eef2f8" />
+          <div style="color:#5a6881;font-size:13px;line-height:1.6">
+            Scan the QR code for quick check-in<br />
+            Checkout session: cs_test_a1vvy0XSDum9m0uLu2fsljS7BNcGjDC4Tohld3a9j94YUptTQn3IpeDnqJ<br />
+            Generated at: середа, 1 квітня 2026 р. о 13:03
+          </div>
+        </div>
+      </footer>
+    </section>
+  </body>
+</html>

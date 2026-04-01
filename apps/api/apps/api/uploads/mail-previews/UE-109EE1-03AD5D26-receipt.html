@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Payment receipt</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #132033;
+        --muted: #607089;
+        --card: #ffffff;
+        --line: rgba(19, 32, 51, 0.12);
+        --bg: #eef2f8;
+        --accent: #d45a2b;
+        --accent-soft: rgba(212, 90, 43, 0.1);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Segoe UI", sans-serif;
+        padding: 24px;
+      }
+      .shell {
+        max-width: 760px;
+        margin: 0 auto;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: var(--card);
+        box-shadow: 0 24px 80px rgba(30, 55, 90, 0.12);
+      }
+      .masthead {
+        padding: 32px;
+        background: linear-gradient(135deg, #132033 0%, #1c3155 58%, #28537a 100%);
+        color: #f7fbff;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(247, 251, 255, 0.14);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 16px 0 10px;
+        font-size: 34px;
+        line-height: 1.05;
+      }
+      p {
+        margin: 0;
+        color: inherit;
+        line-height: 1.7;
+      }
+      .body {
+        padding: 32px;
+      }
+      .mail-meta {
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: #f8fbff;
+        margin-bottom: 24px;
+      }
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .meta-row span:first-child {
+        color: var(--muted);
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin: 24px 0;
+      }
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(212, 90, 43, 0.08), rgba(255, 255, 255, 0.9));
+      }
+      .summary-card strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 18px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 8px;
+        padding: 14px 18px;
+        border-radius: 16px;
+        background: #132033;
+        color: #f7fbff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .note {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: var(--accent-soft);
+        color: var(--ink);
+      }
+      @media (max-width: 720px) {
+        body { padding: 12px; }
+        .masthead, .body { padding: 22px; }
+        .summary { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="shell">
+      <header class="masthead">
+        <span class="pill">Payment receipt</span>
+        <h1>фывфвы</h1>
+        <p>
+          Hi dk, your card payment was captured successfully.
+          Your generated ticket is attached to this email and also available with the button below.
+        </p>
+      </header>
+      <div class="body">
+        <div class="mail-meta">
+          <div class="meta-row"><span>To</span><strong>dimaamim277@gmail.com</strong></div>
+          <div class="meta-row"><span>Organizer</span><strong>фвы</strong></div>
+          <div class="meta-row"><span>Session</span><strong>cs_test_a1vvy0XSDum9m0uLu2fsljS7BNcGjDC4Tohld3a9j94YUptTQn3IpeDnqJ</strong></div>
+          <div class="meta-row"><span>Ticket code</span><strong>UE-109EE1-03AD5D26</strong></div>
+        </div>
+
+        <p>
+          We confirmed 1 paid ticket(s) for <strong>фывфвы</strong>.
+          Keep this email for your records or open the generated ticket below.
+        </p>
+
+        <div class="summary">
+          <article class="summary-card">
+            <span>Date and time</span>
+            <strong>четвер, 16 квітня 2026 р. о 15:02</strong>
+          </article>
+          <article class="summary-card">
+            <span>Location</span>
+            <strong>Київ, Набережне шосе, Аскольдова Могила, Клов, Печерський район, Київ, 01008, Україна</strong>
+          </article>
+          <article class="summary-card">
+            <span>Paid amount</span>
+            <strong>$1.00</strong>
+          </article>
+          <article class="summary-card">
+            <span>Quantity</span>
+            <strong>1</strong>
+          </article>
+        </div>
+
+        <a class="button" href="http://localhost:4000/uploads/tickets/UE-109EE1-03AD5D26.html" target="_blank" rel="noreferrer">
+          Open generated ticket
+        </a>
+
+        <div style="margin-top:28px;text-align:center">
+          <p style="color:#607089;font-size:13px;margin-bottom:12px">Scan at check-in</p>
+          <img src="cid:qr-ue-109ee1-03ad5d26@uevent" alt="QR Code" width="160" height="160" style="border-radius:16px;border:6px solid #eef2f8" />
+          <p style="margin-top:10px;font-size:12px;color:#888;letter-spacing:.04em">UE-109EE1-03AD5D26</p>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -283,29 +283,6 @@ export type RegisterPayload = {
   password: string;
 };
 
-export type CompletePaymentPayload = {
-  eventId: string;
-  quantity?: number;
-  promoCode?: string;
-  cardholderName: string;
-  cardNumber: string;
-  expiry: string;
-  cvc: string;
-};
-
-export type CompletePaymentResponse = {
-  registration: ApiRegistration;
-  redirectUrl: string;
-  amount: number;
-  originalAmount: number;
-  discountPercent: number;
-  promoCode: string | null;
-  eventId: string;
-  eventTitle: string;
-  sessionId: string;
-  status: string;
-};
-
 export type UpdateCurrentUserPayload = {
   displayName?: string;
   interests?: string[];
@@ -601,14 +578,6 @@ export function confirmCheckoutSession(sessionId: string, token: string) {
     method: 'POST',
     token,
     body: JSON.stringify({ sessionId }),
-  });
-}
-
-export function completePayment(payload: CompletePaymentPayload, token: string) {
-  return requestJson<CompletePaymentResponse>('/payments/complete', {
-    method: 'POST',
-    token,
-    body: JSON.stringify(payload),
   });
 }
 
