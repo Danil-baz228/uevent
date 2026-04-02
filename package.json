@@ -11,6 +11,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
+    "build": "npm run build:web && npm run build:api",
+    "start": "npm --workspace @uevent/api run start",
     "dev:web": "npm --workspace @uevent/web run dev",
     "dev:api": "npm --workspace @uevent/api run start:dev",
     "build:web": "npm --workspace @uevent/web run build",

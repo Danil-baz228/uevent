@@ -6,6 +6,8 @@ import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
 import QRCode from 'qrcode';
 
+import { UPLOADS_ROOT } from '../../utils/paths';
+
 type SendPaymentReceiptInput = {
   attendee: {
     displayName: string;
@@ -39,7 +41,7 @@ export type PaymentReceiptArtifacts = {
 export class MailService {
   private readonly transporter: Transporter;
   private readonly fromAddress: string;
-  private readonly uploadsRoot = join(process.cwd(), 'apps', 'api', 'uploads');
+  private readonly uploadsRoot = UPLOADS_ROOT;
   private readonly ticketsDir = join(this.uploadsRoot, 'tickets');
   private readonly mailPreviewDir = join(this.uploadsRoot, 'mail-previews');
   private readonly rawEmailDir = join(this.uploadsRoot, 'mail-raw');

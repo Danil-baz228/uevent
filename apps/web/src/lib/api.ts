@@ -1,5 +1,19 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
+function resolveApiBaseUrl() {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  if (typeof window === 'undefined') {
+    return 'http://localhost:4000/api';
+  }
+
+  const { hostname, origin } = window.location;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  return isLocalhost ? 'http://localhost:4000/api' : `${origin}/api`;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
 export type ApiHealth = {

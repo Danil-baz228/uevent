@@ -15,7 +15,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { extname } from 'path';
 import { mkdirSync } from 'fs';
 
 import { CommentsService } from '../comments/comments.service';
@@ -28,8 +28,9 @@ import { FindEventsDto } from './dto/find-events.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventsService } from './events.service';
 import { verifyAccessToken } from '../auth/auth.utils';
+import { UPLOADS_ROOT } from '../../utils/paths';
 
-const uploadDirectory = join(process.cwd(), 'apps', 'api', 'uploads');
+const uploadDirectory = UPLOADS_ROOT;
 mkdirSync(uploadDirectory, { recursive: true });
 
 function buildPosterFilename(
