@@ -24,16 +24,28 @@ const databaseImports = isDatabaseEnabled
   ? [
       TypeOrmModule.forRootAsync({
         inject: [ConfigService],
-        useFactory: (configService: ConfigService) =>
-          createDatabaseOptions({
-            host: configService.getOrThrow<string>('DATABASE_HOST'),
-            port: Number(configService.getOrThrow<number>('DATABASE_PORT')),
-            username: configService.getOrThrow<string>('DATABASE_USER'),
-            password: configService.getOrThrow<string>('DATABASE_PASSWORD'),
-            database: configService.getOrThrow<string>('DATABASE_NAME'),
+        useFactory: (configService: ConfigService) => {
+          const databaseUrl = configService.get<string>('DATABASE_URL');
+
+          return createDatabaseOptions({
+            url: databaseUrl,
+            host: databaseUrl ? undefined : configService.getOrThrow<string>('DATABASE_HOST'),
+            port: databaseUrl
+              ? undefined
+              : Number(configService.getOrThrow<number>('DATABASE_PORT')),
+            username: databaseUrl ? undefined : configService.getOrThrow<string>('DATABASE_USER'),
+            password: databaseUrl
+              ? undefined
+              : configService.getOrThrow<string>('DATABASE_PASSWORD'),
+            database: databaseUrl ? undefined : configService.getOrThrow<string>('DATABASE_NAME'),
             synchronize: false,
             migrationsRun: true,
-          }),
+            ssl: configService.get<boolean>('DATABASE_SSL'),
+            sslRejectUnauthorized: configService.get<boolean>(
+              'DATABASE_SSL_REJECT_UNAUTHORIZED',
+            ),
+          });
+        },
       }),
     ]
   : [];

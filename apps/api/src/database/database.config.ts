@@ -30,6 +30,7 @@ import { AddPaymentReceiptArtifacts1760000000019 } from './migrations/1760000000
 import { AddRegistrationCheckInFields1760000000020 } from './migrations/1760000000020-AddRegistrationCheckInFields';
 import { AddCommentsClosedByAdmin1760000000021 } from './migrations/1760000000021-AddCommentsClosedByAdmin';
 import { AddUserIsAdmin1760000000022 } from './migrations/1760000000022-AddUserIsAdmin';
+import { AddPasswordResetFieldsToUsers1760000000023 } from './migrations/1760000000023-AddPasswordResetFieldsToUsers';
 
 export const databaseEntities = [
   UserEntity,
@@ -65,19 +66,48 @@ export const databaseMigrations = [
   AddRegistrationCheckInFields1760000000020,
   AddCommentsClosedByAdmin1760000000021,
   AddUserIsAdmin1760000000022,
+  AddPasswordResetFieldsToUsers1760000000023,
 ];
 
 type DatabaseConnectionConfig = {
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  database: string;
+  url?: string;
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  database?: string;
   synchronize?: boolean;
   migrationsRun?: boolean;
+  ssl?: boolean;
+  sslRejectUnauthorized?: boolean;
 };
 
+function getUrlHost(url?: string) {
+  if (!url) {
+    return undefined;
+  }
+
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function getUrlSslMode(url?: string) {
+  if (!url) {
+    return undefined;
+  }
+
+  try {
+    return new URL(url).searchParams.get('sslmode')?.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
 export function createDatabaseOptions({
+  url,
   host,
   port,
   username,
@@ -85,17 +115,30 @@ export function createDatabaseOptions({
   database,
   synchronize = false,
   migrationsRun = false,
+  ssl,
+  sslRejectUnauthorized = false,
 }: DatabaseConnectionConfig): DataSourceOptions {
+  const resolvedHost = getUrlHost(url) ?? host;
+  const sslMode = getUrlSslMode(url);
+  const shouldUseSsl =
+    ssl ??
+    (sslMode ? sslMode !== 'disable' : (resolvedHost?.includes('neon.tech') ?? false));
+
   return {
     type: 'postgres',
-    host,
-    port,
-    username,
-    password,
-    database,
+    ...(url
+      ? { url }
+      : {
+          host,
+          port,
+          username,
+          password,
+          database,
+        }),
     entities: databaseEntities,
     migrations: databaseMigrations,
     synchronize,
     migrationsRun,
+    ssl: shouldUseSsl ? { rejectUnauthorized: sslRejectUnauthorized } : false,
   };
 }
