@@ -1,0 +1,13 @@
+.git
+.gitignore
+.codex-run
+.npm-cache
+node_modules
+apps/*/node_modules
+apps/*/dist
+coverage
+dist
+*.log
+docker-compose.override.yml
+apps/api/.env
+apps/web/.env
