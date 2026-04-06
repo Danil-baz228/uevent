@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateCurrentUserDto {
   @IsOptional()
@@ -10,4 +10,8 @@ export class UpdateCurrentUserDto {
   @IsArray()
   @IsString({ each: true })
   interests?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  showAttendeeNameByDefault?: boolean;
 }

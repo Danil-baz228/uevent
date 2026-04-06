@@ -30,6 +30,7 @@ import { AddPaymentReceiptArtifacts1760000000019 } from './migrations/1760000000
 import { AddRegistrationCheckInFields1760000000020 } from './migrations/1760000000020-AddRegistrationCheckInFields';
 import { AddCommentsClosedByAdmin1760000000021 } from './migrations/1760000000021-AddCommentsClosedByAdmin';
 import { AddUserIsAdmin1760000000022 } from './migrations/1760000000022-AddUserIsAdmin';
+import { AddUserAttendeeNameDefault1760000000023 } from './migrations/1760000000023-AddUserAttendeeNameDefault';
 
 export const databaseEntities = [
   UserEntity,
@@ -65,6 +66,7 @@ export const databaseMigrations = [
   AddRegistrationCheckInFields1760000000020,
   AddCommentsClosedByAdmin1760000000021,
   AddUserIsAdmin1760000000022,
+  AddUserAttendeeNameDefault1760000000023,
 ];
 
 type DatabaseConnectionConfig = {

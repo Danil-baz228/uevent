@@ -634,6 +634,7 @@ export class AuthService {
       isAdmin: user.isAdmin || this.isAdminEmail(user.email),
       interests: user.interests,
       subscribedCompanyIds: user.subscribedCompanyIds ?? [],
+      showAttendeeNameByDefault: user.showAttendeeNameByDefault ?? true,
       companies,
       createdAt: user.createdAt,
     };

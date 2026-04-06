@@ -68,6 +68,8 @@ export function TicketsPage() {
 
   const [settingsName, setSettingsName] = useState('');
   const [settingsInterests, setSettingsInterests] = useState('');
+  const [settingsShowAttendeeNameByDefault, setSettingsShowAttendeeNameByDefault] =
+    useState(true);
   const [settingsStatus, setSettingsStatus] = useState<SaveStatus>('idle');
   const [settingsMessage, setSettingsMessage] = useState('');
 
@@ -267,6 +269,26 @@ export function TicketsPage() {
             hint: 'After opening the message, the app will ask for a new password and confirmation.',
             success: 'Password reset email sent. Check your inbox.',
             failed: 'Failed to send password reset email',
+          },
+    [language],
+  );
+
+  const attendeeNamePreferenceCopy = useMemo(
+    () =>
+      language === 'uk'
+        ? {
+            label: 'Показувати моє ім’я у списках відвідувачів',
+            hint:
+              'Це налаштування стане значенням за замовчуванням для нових реєстрацій на події.',
+            visible: 'Показувати',
+            hidden: 'Приховувати',
+          }
+        : {
+            label: 'Show my name in attendee lists',
+            hint:
+              'This preference becomes the default for your new event registrations.',
+            visible: 'Show',
+            hidden: 'Hide',
           },
     [language],
   );
@@ -509,6 +531,7 @@ export function TicketsPage() {
 
     setSettingsName(user.displayName);
     setSettingsInterests(user.interests.join(', '));
+    setSettingsShowAttendeeNameByDefault(user.showAttendeeNameByDefault ?? true);
     setNewEmail(user.email);
     setRecoveryEmail(user.email);
   }, [user]);
@@ -1442,6 +1465,7 @@ export function TicketsPage() {
                       await updateProfile({
                         displayName: settingsName.trim(),
                         interests,
+                        showAttendeeNameByDefault: settingsShowAttendeeNameByDefault,
                       });
 
                       setSettingsStatus('idle');
@@ -1475,6 +1499,28 @@ export function TicketsPage() {
                       onChange={(event) => setSettingsInterests(event.target.value)}
                       placeholder={pageCopy.interestsHint}
                     />
+                  </label>
+
+                  <label className="field">
+                    <span>{attendeeNamePreferenceCopy.label}</span>
+                    <select
+                      value={settingsShowAttendeeNameByDefault ? 'show' : 'hide'}
+                      onChange={(event) =>
+                        setSettingsShowAttendeeNameByDefault(
+                          event.target.value === 'show',
+                        )
+                      }
+                    >
+                      <option value="show">
+                        {attendeeNamePreferenceCopy.visible}
+                      </option>
+                      <option value="hide">
+                        {attendeeNamePreferenceCopy.hidden}
+                      </option>
+                    </select>
+                    <small className="field-hint">
+                      {attendeeNamePreferenceCopy.hint}
+                    </small>
                   </label>
 
                   {settingsMessage ? (

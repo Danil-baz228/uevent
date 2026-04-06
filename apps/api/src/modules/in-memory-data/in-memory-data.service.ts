@@ -23,6 +23,7 @@ type CreateUserInput = {
   refreshTokenHash?: string | null;
   interests?: string[];
   subscribedCompanyIds?: string[];
+  showAttendeeNameByDefault?: boolean;
   isAdmin?: boolean;
   createdAt?: Date;
 };
@@ -602,6 +603,7 @@ export class InMemoryDataService {
       passwordResetTokenExpiresAt: null,
       interests: input.interests ?? [],
       subscribedCompanyIds: input.subscribedCompanyIds ?? [],
+      showAttendeeNameByDefault: input.showAttendeeNameByDefault ?? true,
       isAdmin: input.isAdmin ?? false,
       createdAt: input.createdAt ?? new Date(),
       events: [],
@@ -737,6 +739,7 @@ export class InMemoryDataService {
       ...user,
       interests: [...user.interests],
       subscribedCompanyIds: [...(user.subscribedCompanyIds ?? [])],
+      showAttendeeNameByDefault: user.showAttendeeNameByDefault ?? true,
       createdAt: new Date(user.createdAt),
       events: [],
       companies: [],

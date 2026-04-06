@@ -36,6 +36,9 @@ export class UserEntity {
   @Column('uuid', { array: true, default: '{}' })
   subscribedCompanyIds!: string[];
 
+  @Column({ default: true })
+  showAttendeeNameByDefault!: boolean;
+
   @Column({ default: false })
   isAdmin!: boolean;
 

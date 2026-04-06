@@ -34,6 +34,7 @@ type AuthContextValue = {
   updateProfile: (payload: {
     displayName?: string;
     interests?: string[];
+    showAttendeeNameByDefault?: boolean;
   }) => Promise<void>;
   reloadUser: () => Promise<void>;
   changeEmail: (payload: ChangeEmailPayload) => Promise<void>;
@@ -181,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function updateProfile(payload: {
     displayName?: string;
     interests?: string[];
+    showAttendeeNameByDefault?: boolean;
   }) {
     const stored = readStoredSession();
 

@@ -37,7 +37,14 @@ export class RegistrationsService {
     private readonly eventsRepository: Repository<EventEntity> | undefined,
   ) {}
 
+  private async getDefaultAttendeeNameVisibility(userId: string) {
+    const attendee = await this.usersService.getCurrentUser(userId);
+    return attendee.showAttendeeNameByDefault ?? true;
+  }
+
   async createFreeRegistration(dto: CreateRegistrationDto, userId: string) {
+    const showAttendeeName = await this.getDefaultAttendeeNameVisibility(userId);
+
     if (!this.registrationsRepository || !this.eventsRepository) {
       const event = this.inMemoryData.findEventById(dto.eventId);
 
@@ -68,7 +75,7 @@ export class RegistrationsService {
         stripePaymentStatus: 'free',
         reminderAt: null,
         reminderSentAt: null,
-        showAttendeeName: true,
+        showAttendeeName,
         ticketAssetPath: null,
         paymentReceiptPreviewPath: null,
         paymentReceiptMessageId: null,
@@ -120,7 +127,7 @@ export class RegistrationsService {
         stripePaymentStatus: 'free',
         reminderAt: null,
         reminderSentAt: null,
-        showAttendeeName: true,
+        showAttendeeName,
         ticketAssetPath: null,
         paymentReceiptPreviewPath: null,
         paymentReceiptMessageId: null,
@@ -341,6 +348,8 @@ export class RegistrationsService {
     quantity: number,
     amountTotal?: number,
   ) {
+    const showAttendeeName = await this.getDefaultAttendeeNameVisibility(userId);
+
     if (!this.registrationsRepository || !this.eventsRepository) {
       const event = this.inMemoryData.findEventById(eventId);
 
@@ -412,7 +421,7 @@ export class RegistrationsService {
         stripePaymentStatus: 'unpaid',
         reminderAt: null,
         reminderSentAt: null,
-        showAttendeeName: true,
+        showAttendeeName,
         ticketAssetPath: null,
         paymentReceiptPreviewPath: null,
         paymentReceiptMessageId: null,
@@ -502,7 +511,7 @@ export class RegistrationsService {
         stripePaymentStatus: 'unpaid',
         reminderAt: null,
         reminderSentAt: null,
-        showAttendeeName: true,
+        showAttendeeName,
         ticketAssetPath: null,
         paymentReceiptPreviewPath: null,
         paymentReceiptMessageId: null,

@@ -49,6 +49,7 @@ export class UsersService {
     const nextInterests = dto.interests
       ?.map((interest) => interest.trim())
       .filter((interest) => interest.length > 0);
+    const nextShowAttendeeNameByDefault = dto.showAttendeeNameByDefault;
 
     if (!this.usersRepository) {
       const user = this.inMemoryData.findUserById(userId);
@@ -60,6 +61,8 @@ export class UsersService {
       this.inMemoryData.updateUser(userId, {
         displayName: nextDisplayName || user.displayName,
         interests: nextInterests ?? user.interests,
+        showAttendeeNameByDefault:
+          nextShowAttendeeNameByDefault ?? user.showAttendeeNameByDefault ?? true,
       });
 
       const updatedUser = this.inMemoryData.findUserById(userId);
@@ -82,6 +85,8 @@ export class UsersService {
 
     user.displayName = nextDisplayName || user.displayName;
     user.interests = nextInterests ?? user.interests;
+    user.showAttendeeNameByDefault =
+      nextShowAttendeeNameByDefault ?? user.showAttendeeNameByDefault ?? true;
 
     const savedUser = await this.usersRepository.save(user);
 
@@ -117,6 +122,7 @@ export class UsersService {
       isAdmin: user.isAdmin || this.isAdminEmail(user.email),
       interests: user.interests,
       subscribedCompanyIds: user.subscribedCompanyIds ?? [],
+      showAttendeeNameByDefault: user.showAttendeeNameByDefault ?? true,
       companies:
         !this.companiesRepository || (user.companies ?? []).length > 0
           ? companies

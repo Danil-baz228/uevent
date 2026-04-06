@@ -14,6 +14,7 @@ export type AuthUser = {
   displayName: string;
   interests: string[];
   subscribedCompanyIds: string[];
+  showAttendeeNameByDefault: boolean;
   isAdmin: boolean;
   companies: {
     id: string;
@@ -286,6 +287,7 @@ export type RegisterPayload = {
 export type UpdateCurrentUserPayload = {
   displayName?: string;
   interests?: string[];
+  showAttendeeNameByDefault?: boolean;
 };
 
 export type RefreshTokenPayload = {

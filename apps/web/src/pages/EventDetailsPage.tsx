@@ -238,6 +238,10 @@ export function EventDetailsPage() {
     locale === "uk-UA"
       ? "Повернутися до Stripe Checkout"
       : "Return to Stripe Checkout";
+  const organizerOwnEventMessage =
+    locale === "uk-UA"
+      ? "Це ваша компанія, тому підписка на власні сповіщення тут недоступна."
+      : "This is your company, so organizer alerts are not available here.";
   const checkoutPendingMessage =
     locale === "uk-UA"
       ? "Оплату ще не завершено. Ви можете знову відкрити Stripe Checkout і завершити тестовий платіж."
@@ -1247,7 +1251,7 @@ export function EventDetailsPage() {
             {copy.common.backToDiscover}{" "}
           </Link>{" "}
         </article>{" "}
-        {organizerCompany && !isOrganizerCompanyOwner ? (
+        {organizerCompany ? (
           <article className="form-card organizer-subscription-card">
             <span className="eyebrow">
               {copy.eventDetails.organizerNotificationsEyebrow}
@@ -1261,6 +1265,10 @@ export function EventDetailsPage() {
             {isSubscribedToOrganizer ? (
               <p className="notice success">
                 {copy.eventDetails.organizerNotificationsActive}
+              </p>
+            ) : isOrganizerCompanyOwner ? (
+              <p className="muted">
+                {organizerOwnEventMessage}
               </p>
             ) : !user ? (
               <p className="muted">
@@ -1276,7 +1284,10 @@ export function EventDetailsPage() {
                 className={
                   isSubscribedToOrganizer ? "secondary-button" : "primary-button"
                 }
-                disabled={organizerSubscriptionStatus === "saving"}
+                disabled={
+                  organizerSubscriptionStatus === "saving" ||
+                  isOrganizerCompanyOwner
+                }
                 onClick={() => void handleOrganizerSubscriptionToggle()}
               >
                 {organizerSubscriptionStatus === "saving"
